@@ -14,11 +14,17 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-                    <flux:navlist.item icon="sparkles" :href="route('ai.content-idea-suite')" :current="request()->routeIs('ai.content-idea-suite')" wire:navigate>{{ __('AI Content Idea Suite') }}</flux:navlist.item>
+                    <flux:navlist.item icon="pencil" :href="route('ai.content-idea-suite')" :current="request()->routeIs('ai.content-idea-suite')" wire:navigate>{{ __('AI Content Idea Suite') }}</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 
             <flux:spacer />
+
+            <flux:navlist variant="outline">
+                <flux:navlist.group class="grid">
+                    <flux:navlist.item icon="archive-box" :href="route('activity.index')" :current="request()->routeIs('activity.*')" wire:navigate>{{ __('Activity Log') }}</flux:navlist.item>
+                </flux:navlist.group>
+            </flux:navlist>
 
             <flux:dropdown class="hidden lg:block" position="bottom" align="start">
                 <flux:profile
