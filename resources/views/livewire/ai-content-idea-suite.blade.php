@@ -403,27 +403,65 @@ new class extends Component {
         }
     }
 
+    // protected function buildMarketingCopyPrompt(): string
+    // {
+    //     $audience = $this->marketingAudience ?: 'General Audience';
+    //     $keywords = $this->marketingKeywords ?: 'None';
+    //     $tone = $this->marketingTone ?: 'Professional';
+    //     $language = $this->marketingLanguage ?: 'English';
+        
+    //     return "You are an expert marketing copywriter. Generate compelling marketing copy based on the following details.\n" .
+    //            "The final output language must be strictly in {$language}.\n\n" .
+    //            "**Product/Service Details:**\n" .
+    //            "{$this->marketingProduct}\n\n" .
+    //            "**Target Audience:**\n" .
+    //            "{$audience}\n\n" .
+    //            "**Tone of Voice:**\n" .
+    //            "{$tone}\n\n" .
+    //            "**Keywords to include:**\n" .
+    //            "{$keywords}\n\n" .
+    //            "The copy should be engaging, persuasive, and ready for use in social media posts, advertisements, or website content. " .
+    //            "Structure the output clearly with a headline and body.\n\n" .
+    //            "IMPORTANT: All output must be in {$language} language, including the headline, description, and any other text.";
+    // }
+
     protected function buildMarketingCopyPrompt(): string
     {
-        $audience = $this->marketingAudience ?: 'potential customers';
-        $keywords = $this->marketingKeywords ? "Focus on these keywords: {$this->marketingKeywords}" : '';
+        $audience = $this->marketingAudience ?: 'General Audience';
+        $keywords = $this->marketingKeywords ?: 'None';
+        $tone = $this->marketingTone ?: 'Professional';
+        $language = $this->marketingLanguage ?: 'English';
         
-        return "Create a compelling marketing copy with the following details:\n\n" .
-               "Product/Service: {$this->marketingProduct}\n" . 
-               "Target Audience: {$this->marketingAudience}\n" .
-               "Key Features/Keywords: {$this->marketingKeywords}\n\n" .
-               "Tone: {$this->marketingTone}\n" .
-               "Language: {$this->marketingLanguage}\n\n" .
-               "Please provide:\n" .
-               "1. A catchy headline\n" . 
-               "2. A short description (50-100 words)\n" .
-               "3. 3-5 key benefits as bullet points\n\n" .
-               "IMPORTANT: All output must be in {$this->marketingLanguage} language, including the headline, description, and bullet points.";
+        return "You are an expert marketing copywriter. Generate compelling marketing copy based on the following details.
+        The final output language must be strictly in {$language}.
+
+        **Product/Service Details:**
+        {$this->marketingProduct}
+
+        **Target Audience:**
+        {$audience}
+
+        **Tone of Voice:**
+        {$tone}
+
+        **Keywords to include:**
+        {$keywords}
+
+        **Output Format:**
+        1. Start with a compelling HEADLINE (wrapped in ## HEADLINE)
+        2. Follow with the BODY content
+        3. End with a strong CALL-TO-ACTION (wrapped in **CTA:**)
+        4. Include relevant HASHTAGS at the end (wrapped in ## HASHTAGS)
+
+        IMPORTANT: 
+        - The CTA should be a single, clear, action-oriented sentence and must be in {$language} language.
+        - Include 3-5 relevant hashtags based on the content.
+        - All output must be in {$language} language.
+        - Ensure the content is engaging and matches the specified tone.";
     }
 
     protected function parseMarketingCopyResponse(string $response): void
     {
-        $lines = explode("\n", $response);
         $output = [
             'headline' => '',
             'body' => '',
@@ -431,55 +469,74 @@ new class extends Component {
             'hashtags' => []
         ];
 
-        $currentSection = null;
-        
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) continue;
+        // Split the response into lines and trim them
+        $lines = array_map('trim', explode("\n", $response));
+        $lines = array_filter($lines, function($line) {
+            return !empty($line);
+        });
 
-            // Check for section headers
-            if (preg_match('/^\d+\.\s*(.+?):?$/i', $line, $matches)) {
-                $section = strtolower($matches[1]);
-                if (str_contains($section, 'headline')) {
-                    $currentSection = 'headline';
-                    $output['headline'] = trim(str_ireplace(['headline', '1.', ':'], '', $line), " \t\n\r\0\x0B:");
-                } elseif (str_contains($section, 'body') || str_contains($section, 'copy')) {
-                    $currentSection = 'body';
-                } elseif (str_contains($section, 'call') || str_contains($section, 'cta')) {
-                    $currentSection = 'cta';
-                } elseif (str_contains($section, 'hashtag')) {
-                    $currentSection = 'hashtags';
-                }
-            } else {
-                // Add content to the current section
-                if ($currentSection === 'body') {
-                    $output['body'] .= $line . "\n\n";
-                } elseif ($currentSection === 'cta' && empty($output['cta'])) {
-                    $output['cta'] = $line;
-                } elseif ($currentSection === 'hashtags') {
-                    preg_match_all('/#(\w+)/', $line, $matches);
-                    if (!empty($matches[1])) {
-                        $output['hashtags'] = array_merge($output['hashtags'], $matches[1]);
-                    }
-                } elseif ($currentSection === 'headline' && empty($output['headline'])) {
-                    $output['headline'] = $line;
-                }
+        // Try to find the headline (first non-empty line that's not a section header)
+        foreach ($lines as $line) {
+            if (!preg_match('/^#+\s*\w+/i', $line)) { // Skip section headers
+                $output['headline'] = $line;
+                break;
             }
         }
 
-        // Clean up the body text
-        $output['body'] = trim($output['body']);
-        
-        // Ensure we have at least some default values
-        if (empty($output['headline'])) {
+        // The rest is considered the body
+        $bodyLines = array_slice($lines, 1);
+        $output['body'] = implode("\n\n", $bodyLines);
+
+        // Try to extract CTA - look for action-oriented phrases in the last few lines
+        $ctaCandidates = array_slice($bodyLines, -3); // Check last 3 lines for CTA
+        foreach ($ctaCandidates as $line) {
+            if (preg_match('/(?:call to action|cta|visit|learn more|sign up|contact us|get started|shop now|buy now|discover|explore|try now|join now|order now)/i', $line)) {
+                $output['cta'] = $line;
+                break;
+            }
+        }
+
+        // If no CTA found, use the last line as CTA if it's not too long
+        if (empty($output['cta']) && !empty($bodyLines)) {
+            $lastLine = end($bodyLines);
+            if (strlen($lastLine) < 100 && !preg_match('/[.!?]\s*$/', $lastLine)) {
+                $output['cta'] = $lastLine;
+            }
+        }
+
+        // Extract hashtags from the entire response
+        if (preg_match_all('/#(\w+)/', $response, $matches)) {
+            $output['hashtags'] = array_unique($matches[1]);
+            $output['hashtags'] = array_slice($output['hashtags'], 0, 5); // Limit to 5 hashtags
+        }
+
+        // Fallback to product name if no headline
+        if (empty($output['headline']) && !empty($this->marketingProduct)) {
             $output['headline'] = Str::headline($this->marketingProduct);
         }
+
+        // Generate a CTA if none found
         if (empty($output['cta'])) {
-            $output['cta'] = __('Start your free trial today and see instant results.');
+            $ctaOptions = [
+                __('Get started with :product today!', ['product' => $this->marketingProduct]),
+                __('Discover the power of :product!', ['product' => $this->marketingProduct]),
+                __('Try :product now!', ['product' => $this->marketingProduct]),
+                __('Experience :product today!', ['product' => $this->marketingProduct]),
+                __('Start your journey with :product!', ['product' => $this->marketingProduct])
+            ];
+            $output['cta'] = $ctaOptions[array_rand($ctaOptions)];
         }
+
+        // Ensure we have some hashtags
         if (empty($output['hashtags'])) {
-            $keywords = array_filter(array_map('trim', explode(',', $this->marketingKeywords)));
-            $output['hashtags'] = array_slice($keywords, 0, 3);
+            $keywords = !empty($this->marketingKeywords) 
+                ? array_filter(array_map('trim', explode(',', $this->marketingKeywords)))
+                : [];
+            $defaultTags = [
+                'marketing', 'digitalmarketing', 'business', 'growth', 'success', 
+                'entrepreneur', 'startup', 'branding', 'socialmedia', 'contentmarketing'
+            ];
+            $output['hashtags'] = array_slice(array_merge($keywords, $defaultTags), 0, 5);
         }
 
         $this->marketingOutput = $output;
@@ -939,17 +996,33 @@ new class extends Component {
                     <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
                         @if ($marketingOutput)
                             <article class="prose max-w-none text-zinc-800 dark:prose-invert dark:text-zinc-100">
-                                <h3>{{ $marketingOutput['headline'] }}</h3>
-                            <p>{{ $marketingOutput['body'] }}</p>
-                            <p><strong>{{ __('Call to Action:') }}</strong> {{ $marketingOutput['cta'] }}</p>
-                            @if (!empty($marketingOutput['keywords']))
-                                <p class="mt-4 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-300">{{ __('Suggested Keywords:') }}</p>
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    @foreach ($marketingOutput['keywords'] as $keyword)
-                                        <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">{{ $keyword }}</span>
-                                    @endforeach
-                                </div>
-                            @endif
+                                @if(!empty($marketingOutput['headline']))
+                                    <h3>{{ $marketingOutput['headline'] }}</h3>
+                                @endif
+                                
+                                @if(!empty($marketingOutput['body']))
+                                    <div class="whitespace-pre-line">{{ $marketingOutput['body'] }}</div>
+                                @endif
+                                
+                                @if(!empty($marketingOutput['cta']))
+                                    <div class="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                                        <p class="font-medium text-zinc-900 dark:text-zinc-100">{{ __('Call to Action') }}</p>
+                                        <p class="mt-1">{{ $marketingOutput['cta'] }}</p>
+                                    </div>
+                                @endif
+                                
+                                @if(!empty($marketingOutput['hashtags']))
+                                    <div class="mt-6">
+                                        <p class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{{ __('Tags') }}</p>
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach ($marketingOutput['hashtags'] as $tag)
+                                                <span class="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                                    #{{ ltrim($tag, '#') }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
                             </article>
                         @else
                         <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
