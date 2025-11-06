@@ -4,6 +4,7 @@ use App\Models\ApiKey;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Livewire\Volt\Component;
 
@@ -16,6 +17,8 @@ new class extends Component {
     public array $testStatuses = [];
     public array $healthCheckResults = [];
     public ?string $healthCheckRanAt = null;
+    public ?string $newKeyTestStatus = null;
+    public ?string $newKeyTestMessage = null;
 
     public function mount(): void
     {
@@ -70,6 +73,12 @@ new class extends Component {
     public function addKey(): void
     {
         $this->validate();
+
+        if ($this->newKeyTestStatus !== 'connected') {
+            $this->addError('secret', __('Please run and pass the connection test before saving this key.'));
+
+            return;
+        }
 
         $apiKey = ApiKey::create([
             'user_id' => Auth::id(),
@@ -131,13 +140,38 @@ new class extends Component {
         $this->testStatuses[$keyId] = 'testing';
 
         $success = false;
+        $message = '';
 
         try {
-            // TODO: Replace with real provider health check.
-            $success = true;
-        } catch (\Throwable $exception) {
-            report($exception);
-            $success = false;
+            $apiKeyDecrypted = decrypt($apiKey->secret);
+            
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKeyDecrypted, [
+                'contents' => [
+                    'parts' => [
+                        ['text' => 'Hello']
+                    ]
+                ]
+            ]);
+
+            if ($response->successful()) {
+                $success = true;
+                $message = __('Connection successful. API key is valid.');
+            } else {
+                $error = $response->json();
+                $message = $error['error']['message'] ?? __('Connection failed. Please verify the key and try again.');
+            }
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            $message = __('Failed to decrypt API key. Please try again.');
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            if (str_contains($message, 'API key not valid')) {
+                $message = __('Invalid API key. Please check and try again.');
+            } elseif (str_contains($message, 'quota')) {
+                $message = __('API key is valid but has exceeded quota.');
+            }
+            report($e);
         }
 
         $apiKey->forceFill([
@@ -147,12 +181,11 @@ new class extends Component {
 
         $this->testStatuses[$keyId] = $apiKey->connection_status;
 
-
         session()->flash(
             'api_key_notification',
-            $success
-                ? __('Connection succeeded. This key is ready to use.')
-                : __('Connection failed. Please verify the key and try again.')
+            $success 
+                ? $message 
+                : ($message ?: __('Connection failed. Please verify the key and try again.'))
         );
     }
 
@@ -212,12 +245,59 @@ new class extends Component {
         );
     }
 
+    public function testNewKey(): void
+    {
+        $this->validate([
+            'provider' => ['required', 'string', 'max:100'],
+            'secret' => ['required', 'string', 'min:10'],
+        ]);
+
+        $this->newKeyTestStatus = 'testing';
+        $this->newKeyTestMessage = __('Testing connection...');
+
+        $success = false;
+        $message = '';
+
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $this->secret, [
+                'contents' => [
+                    'parts' => [
+                        ['text' => 'Hello']
+                    ]
+                ]
+            ]);
+
+            if ($response->successful()) {
+                $success = true;
+                $message = __('Connection successful. You can now save this key.');
+            } else {
+                $error = $response->json();
+                $message = $error['error']['message'] ?? __('Connection failed. Please verify the key and try again.');
+            }
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            if (str_contains($message, 'API key not valid')) {
+                $message = __('Invalid API key. Please check and try again.');
+            } elseif (str_contains($message, 'quota')) {
+                $message = __('API key is valid but has exceeded quota.');
+            }
+            report($e);
+        }
+
+        $this->newKeyTestStatus = $success ? 'connected' : 'failed';
+        $this->newKeyTestMessage = $message;
+    }
+
     protected function resetForm(): void
     {
         $this->provider = 'gemini';
         $this->label = '';
         $this->secret = '';
         $this->makeActive = true;
+        $this->newKeyTestStatus = null;
+        $this->newKeyTestMessage = null;
     }
 }; ?>
 
@@ -266,18 +346,18 @@ new class extends Component {
                         @endphp
 
                         <label
-                            class="flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 transition hover:border-zinc-300 hover:bg-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                            class="group flex cursor-pointer flex-col rounded-2xl border p-5 transition hover:border-zinc-300 hover:bg-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
                             @class([
                                 'border-zinc-900 bg-zinc-50 dark:border-zinc-500 dark:bg-zinc-800' => $selectedKeyId === $key->id,
                                 'border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900' => $selectedKeyId !== $key->id,
                             ])
                         >
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-200">{{ Str::upper($key->provider) }}</span>
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                                <div class="space-y-3">
+                                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                                        <span class="text-zinc-700 dark:text-zinc-200">{{ Str::upper($key->provider) }}</span>
                                         <span
-                                            class="rounded-full px-2 py-1 text-xs font-medium"
+                                            class="rounded-full px-2 py-0.5 text-[11px] font-medium tracking-normal"
                                             @class([
                                                 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200' => $key->user_id === null,
                                                 'bg-zinc-100 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100' => $key->user_id !== null,
@@ -285,27 +365,31 @@ new class extends Component {
                                         >
                                             {{ $key->user_id === null ? __('Shared') : __('Personal') }}
                                         </span>
-                                        <span class="rounded-full px-2 py-1 text-xs font-medium {{ $currentStatus['classes'] }}">
+                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-medium tracking-normal {{ $currentStatus['classes'] }}">
                                             {{ $currentStatus['label'] }}
                                         </span>
                                     </div>
-                                    <p class="text-base font-medium text-zinc-900 dark:text-zinc-50">{{ $key->label }}</p>
-                                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                                        {{ __('Added :date', ['date' => $key->created_at->format('M j, Y')]) }}
-                                    </p>
-                                    <p class="text-sm text-zinc-400 dark:text-zinc-500">
-                                        {{ Str::mask($key->secret, '*', 4, max(0, Str::length($key->secret) - 8)) }}
-                                    </p>
-                                    @if ($key->last_tested_at)
-                                        <p class="text-xs text-zinc-400">
-                                            {{ __('Last tested :time', ['time' => $key->last_tested_at->diffForHumans()]) }}
+
+                                    <div class="space-y-1.5">
+                                        <p class="text-base font-semibold text-zinc-900 dark:text-zinc-50">{{ $key->label }}</p>
+                                        <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                            {{ __('Added :date', ['date' => $key->created_at->format('M j, Y')]) }}
                                         </p>
-                                    @endif
+                                        <p class="text-sm text-zinc-400 dark:text-zinc-500">
+                                            {{ Str::mask($key->secret, '*', 4, max(0, Str::length($key->secret) - 8)) }}
+                                        </p>
+                                        @if ($key->last_tested_at)
+                                            <p class="text-xs text-zinc-400">
+                                                {{ __('Last tested :time', ['time' => $key->last_tested_at->diffForHumans()]) }}
+                                            </p>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="flex items-start gap-2">
+
+                                <div class="flex w-full items-stretch gap-3 sm:w-auto sm:flex-col sm:items-end">
                                     <input
                                         type="radio"
-                                        class="size-4 border border-zinc-300 text-zinc-800 focus:ring-zinc-600"
+                                        class="mt-1 size-4 shrink-0 border border-zinc-300 text-zinc-800 focus:ring-zinc-600 sm:mt-0"
                                         wire:model="selectedKeyId"
                                         value="{{ $key->id }}"
                                         aria-label="{{ __('Select :label', ['label' => $key->label]) }}"
@@ -313,7 +397,7 @@ new class extends Component {
                                     <flux:button
                                         type="button"
                                         variant="outline"
-                                        class="h-8 px-3 text-xs font-semibold"
+                                        class="flex-1 sm:flex-none sm:px-4"
                                         wire:click.stop="testConnection({{ $key->id }})"
                                         wire:loading.attr="disabled"
                                         wire:target="testConnection({{ $key->id }})"
@@ -463,19 +547,47 @@ new class extends Component {
                         </span>
                     </div>
 
-                    <div class="flex items-center gap-3">
-                        <flux:button variant="primary" type="submit" wire:loading.attr="disabled">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <flux:button
+                            type="button"
+                            variant="outline"
+                            wire:click="testNewKey"
+                            wire:loading.attr="disabled"
+                            wire:target="testNewKey"
+                        >
+                            <span wire:loading.remove wire:target="testNewKey">{{ __('Run Test') }}</span>
+                            <span wire:loading wire:target="testNewKey">{{ __('Testing...') }}</span>
+                        </flux:button>
+                        <flux:button
+                            variant="primary"
+                            type="submit"
+                            wire:loading.attr="disabled"
+                            :disabled="$newKeyTestStatus !== 'connected'"
+                        >
                             <span wire:loading.remove>{{ __('Save Key') }}</span>
                             <span wire:loading>{{ __('Saving...') }}</span>
                         </flux:button>
                         <flux:button
                             type="button"
                             variant="outline"
-                            wire:click="$reset('provider', 'label', 'secret', 'makeActive')"
+                            wire:click="$reset('provider', 'label', 'secret', 'makeActive', 'newKeyTestStatus', 'newKeyTestMessage')"
                         >
                             {{ __('Clear') }}
                         </flux:button>
                     </div>
+
+                    @if ($newKeyTestMessage)
+                        <div
+                            @class([
+                                'rounded-xl border px-4 py-3 text-sm',
+                                'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200' => $newKeyTestStatus === 'connected',
+                                'border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200' => $newKeyTestStatus === 'failed',
+                                'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300' => $newKeyTestStatus === 'testing',
+                            ])
+                        >
+                            {{ $newKeyTestMessage }}
+                        </div>
+                    @endif
                 </form>
             </div>
         </div>
