@@ -30,6 +30,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/api-keys', 'settings.api-keys')->name('settings.api-keys');
     Volt::route('ai-content-idea-suite', 'ai-content-idea-suite')->name('ai.content-idea-suite');
     
+    // AI Image Suite
+    Volt::route('ai-image-suite', 'ai-image-suite')->name('ai.image-suite');
+    
     // AI Activity Logs
     Route::get('activity', \App\Livewire\UserActivity\Index::class)->name('activity.index');
 });

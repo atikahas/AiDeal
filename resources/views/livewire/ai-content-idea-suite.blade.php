@@ -796,7 +796,7 @@ new class extends Component {
     
     <div class="flex flex-col gap-2">
         <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{{ __('AI Content Idea Suite') }}</h1>
-        <p class="max-w-3xl text-sm text-zinc-500 dark:text-zinc-400">
+        <p class="max-w-4xl text-sm text-zinc-500 dark:text-zinc-400">
             {{ __('Discover ideas, craft marketing assets, and storyboard product ads with a collaborative team of AI specialists.') }}
         </p>
     </div>
