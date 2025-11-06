@@ -1,4 +1,124 @@
-<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+<?php
+
+use App\Services\GeminiService;
+use App\Services\AiActivityLogger;
+use Livewire\Features\SupportFileUploads\WithFileUploads;
+use Livewire\Volt\Component;
+
+new class extends Component {
+    use WithFileUploads;
+
+    public string $activeTab = 'image-generation';
+    public string $style = 'Photography';
+    public string $lighting = 'Natural';
+    public string $angle = 'Front';
+    public string $composition = 'Rule of Thirds';
+    public string $lensType = 'Prime';
+    public $imageGenerationPhoto;
+    public string $prompt = '';
+    public ?string $generatedImage = null;
+    
+    public array $styles = [
+        'Photography',
+        '3D',
+        'Anime',
+        'Cinematic',
+        'Comic',
+        'Digital Art',
+        'Fantasy Art',
+        'Line Art',
+        'Low Poly',
+        'Neo Punk',
+        'Origami',
+        'Pixel Art',
+        'Texture'
+    ];
+    
+    public array $compositions = [
+        'Rule of Thirds',
+        'Center Composition',
+        'Leading Lines',
+        'Frame Within a Frame',
+        'Symmetry and Patterns'
+    ];
+    
+    public array $lightingOptions = [
+        'Natural',
+        'Studio',
+        'Golden Hour',
+        'Sunset',
+        'Overcast',
+        'High Contrast',
+        'Low Key',
+        'Backlit',
+        'Dramatic',
+        'Soft'
+    ];
+
+    public array $angleOptions = [
+        'Front',
+        'Side',
+        'Top Down',
+        'Close-up',
+        'Wide Angle',
+        'Low Angle',
+        'High Angle',
+        'Over the Shoulder',
+        'Eye Level',
+        'Dutch Angle'
+    ];
+    
+    public array $lensTypes = [
+        'Prime',
+        'Wide Angle',
+        'Telephoto',
+        'Macro',
+        'Fisheye',
+        'Tilt-Shift',
+        'Zoom',
+        'Portrait'
+    ];
+
+    public function setActiveTab(string $tab): void
+    {
+        $this->activeTab = $tab;
+    }
+    
+    public function updatedImageGenerationPhoto()
+    {
+        $this->validateOnly('imageGenerationPhoto', [
+            'imageGenerationPhoto' => 'image|max:5120', // 5MB Max
+        ]);
+    }
+
+    public function generateOrEditImage()
+    {
+        session()->flash('info', 'Image generation functionality will be implemented soon');
+    }
+
+    public string $filmSimulation = 'Kodak Portra 400';
+    
+    public array $filmSimulations = [
+        'Kodak Portra 400',
+        'Fujifilm Provia',
+        'Kodak Ektar 100',
+        'Fujifilm Velvia 50',
+        'Ilford HP5+ 400',
+        'Kodak Tri-X 400',
+        'Fujifilm Superia 400',
+        'Kodak Gold 200',
+        'Cinestill 800T',
+        'Fujifilm Acros 100'
+    ];
+
+    public function resetForm()
+    {
+        $this->reset(['imageGenerationPhoto', 'prompt', 'generatedImage']);
+    }
+};
+?>
+
+<main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
     @if (session()->has('error'))
         <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/30">
             <div class="flex">
@@ -67,42 +187,116 @@
             <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 <div class="flex flex-col gap-6 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                     <div>
-                        <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{{ __('Magika Persona') }}</h2>
+                        <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{{ __('AI Image Generator') }}</h2>
                         <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                            {{ __('Your expert AI team for marketing tasks. Select an agent and describe the task to get personalised insights.') }}
+                            {{ __('Generate images from text or edit existing photos with AI.') }}
                         </p>
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="staff-input">{{ __('Input for agent') }}</label>
-                        <textarea
-                            id="staff-input"
-                            wire:model.defer="staffInput"
-                            rows="4"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                            placeholder="{{ __('Describe your product or campaign...') }}"
-                        ></textarea>
-                        @error('staffInput')
-                            <p class="text-sm text-red-500">{{ $message }}</p>
-                        @enderror
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="product-photo">{{ __('Reference / Source Images (up to 5)') }}</label>
+                            <label for="image-generation-photo" class="flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-200">
+                                <flux:icon.photo variant="outline" class="mb-3 size-10 text-zinc-300" />
+                                <span class="text-sm font-medium">{{ __('Upload image') }}</span>
+                                <span class="mt-1 text-xs text-zinc-400">{{ __('PNG or JPG up to 5MB') }}</span>
+                            </label>
+                            <input id="image-generation-photo" type="file" class="hidden" wire:model.live="imageGenerationPhoto" accept="image/*" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="staff-input">
+                                {{ __('Prompt') }}
+                            </label>
+                            <textarea
+                                id="prompt"
+                                wire:model.live="prompt"
+                                rows="4"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                placeholder="{{ __('Describe the image you want to generate...') }}"
+                            ></textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="style">{{ __('Style') }}</label>
+                            <select
+                                id="style"
+                                wire:model="style"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach($styles as $styleOption)
+                                    <option value="{{ $styleOption }}">{{ $styleOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="lighting">{{ __('Lighting') }}</label>
+                            <select
+                                id="lighting"
+                                wire:model="lighting"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach($lightingOptions as $lightingOption)
+                                    <option value="{{ $lightingOption }}">{{ $lightingOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="angle">{{ __('Angle') }}</label>
+                            <select
+                                id="angle"
+                                wire:model="angle"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach($angleOptions as $angleOption)
+                                    <option value="{{ $angleOption }}">{{ $angleOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="composition">{{ __('Composition') }}</label>
+                            <select
+                                id="composition"
+                                wire:model="composition"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach($compositions as $compositionOption)
+                                    <option value="{{ $compositionOption }}">{{ $compositionOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="lensType">{{ __('Lens Type') }}</label>
+                            <select
+                                id="lensType"
+                                wire:model="lensType"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach($lensTypes as $lensTypeOption)
+                                    <option value="{{ $lensTypeOption }}">{{ $lensTypeOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="filmSimulation">{{ __('Film Simulation') }}</label>
+                            <select
+                                id="filmSimulation"
+                                wire:model="filmSimulation"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach($filmSimulations as $filmSimulationOption)
+                                    <option value="{{ $filmSimulationOption }}">{{ $filmSimulationOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
+                    
+
                     <div class="flex items-center gap-3">
-                        <button
-                            type="button"
-                            wire:click="generateStaffOutput"
-                            wire:loading.attr="disabled"
-                            class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                        >
-                            <span wire:loading.remove wire:target="generateStaffOutput">{{ __('Generate Insights') }}</span>
-                            <span wire:loading wire:target="generateStaffOutput">{{ __('Generating...') }}</span>
+                        <button type="button" class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
+                            Generate Image
                         </button>
-                        <button
-                            type="button"
-                            wire:click="resetStaffForm"
-                            class="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                        >
-                            {{ __('Reset') }}
+                        <button type="button" class="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
+                            Reset
                         </button>
                     </div>
                 </div>
@@ -114,8 +308,10 @@
 
                     <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
                         <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                            <flux:icon.sparkles variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('The AI\'s response will appear here.') }}</p>
+                            <flux:icon.photo variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                {{ __('Enter a prompt to generate an image.') }}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -137,4 +333,4 @@
             </div>
         @endif
     </div>
-</div>
+</main>
