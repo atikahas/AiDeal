@@ -18,6 +18,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('user-password.edit');
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
+    Volt::route('settings/api-keys', 'settings.api-keys')->name('settings.api-keys');
+    Volt::route('ai-content-idea-suite', 'ai-content-idea-suite')->name('ai.content-idea-suite');
 
     Volt::route('settings/two-factor', 'settings.two-factor')
         ->middleware(
