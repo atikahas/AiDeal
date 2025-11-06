@@ -238,8 +238,8 @@ MARKDOWN;
                     type="button"
                     wire:click="setActiveTab('{{ $tabKey }}')"
                     @class([
-                        'rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500',
-                        'bg-purple-600 text-white shadow-sm' => $activeTab === $tabKey,
+                        'rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500',
+                        'bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900' => $activeTab === $tabKey,
                         'bg-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100' => $activeTab !== $tabKey,
                     ])
                 >
@@ -266,8 +266,8 @@ MARKDOWN;
                                 type="button"
                                 wire:click="selectStaff('{{ $agent['key'] }}')"
                                 @class([
-                                    'flex flex-col rounded-lg border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500',
-                                    'border-purple-200 bg-purple-50 text-purple-900 shadow-sm dark:border-purple-500/60 dark:bg-purple-500/10 dark:text-purple-100' => $selectedStaff === $agent['key'],
+                                    'flex flex-col rounded-lg border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500',
+                                    'border-zinc-900 bg-zinc-50 text-zinc-900 shadow-sm dark:border-zinc-500 dark:bg-zinc-800 dark:text-zinc-100' => $selectedStaff === $agent['key'],
                                     'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800' => $selectedStaff !== $agent['key'],
                                 ])
                             >
@@ -283,7 +283,7 @@ MARKDOWN;
                             id="staff-input"
                             wire:model.defer="staffInput"
                             rows="4"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:ring-purple-400"
+                            class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:ring-zinc-400"
                             placeholder="{{ __('Describe your product or campaign...') }}"
                         ></textarea>
                         @error('staffInput')
@@ -296,7 +296,7 @@ MARKDOWN;
                             <select
                                 id="content-language"
                                 wire:model="contentLanguage"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                             >
                                 @foreach ($languages as $language)
                                     <option value="{{ $language }}">{{ $language }}</option>
@@ -309,7 +309,7 @@ MARKDOWN;
                             type="button"
                             wire:click="generateStaffOutput"
                             wire:loading.attr="disabled"
-                            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-70"
+                            class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                         >
                             <span wire:loading.remove wire:target="generateStaffOutput">{{ __('Generate Insights') }}</span>
                             <span wire:loading wire:target="generateStaffOutput">{{ __('Generating...') }}</span>
@@ -336,7 +336,7 @@ MARKDOWN;
                             </article>
                         @else
                             <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                                <flux:icon.sparkles variant="outline" class="size-10 text-purple-300 dark:text-purple-400" />
+                                <flux:icon.sparkles variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
                                 <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('The AI\'s response will appear here.') }}</p>
                             </div>
                         @endif
@@ -360,7 +360,7 @@ MARKDOWN;
                                 id="content-topic"
                                 wire:model.defer="contentTopic"
                                 rows="4"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 placeholder="{{ __('e.g., digital marketing for small business or healthy breakfast recipes') }}"
                             ></textarea>
                             @error('contentTopic')
@@ -373,7 +373,7 @@ MARKDOWN;
                             <select
                                 id="content-language"
                                 wire:model="contentLanguage"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                             >
                                 @foreach ($languages as $language)
                                     <option value="{{ $language }}">{{ $language }}</option>
@@ -387,7 +387,7 @@ MARKDOWN;
                             type="button"
                             wire:click="generateContentIdeas"
                             wire:loading.attr="disabled"
-                            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-70"
+                            class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                         >
                             <span wire:loading.remove wire:target="generateContentIdeas">{{ __('Generate Ideas') }}</span>
                             <span wire:loading wire:target="generateContentIdeas">{{ __('Generating...') }}</span>
@@ -413,14 +413,14 @@ MARKDOWN;
                                 @foreach ($contentIdeasOutput as $idea)
                                     <div class="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
                                         <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">{{ $idea['title'] }}</h3>
-                                        <p class="mt-2 text-sm text-purple-600 dark:text-purple-300">{{ $idea['angle'] }}</p>
+                                        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{{ $idea['angle'] }}</p>
                                         <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ $idea['hook'] }}</p>
                                     </div>
                                 @endforeach
                             </div>
                         @else
                             <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                                <flux:icon.arrow-trending-up variant="outline" class="size-10 text-purple-300 dark:text-purple-400" />
+                                <flux:icon.arrow-trending-up variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
                                 <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated content ideas will appear here.') }}</p>
                             </div>
                         @endif
@@ -444,7 +444,7 @@ MARKDOWN;
                                 id="marketing-product"
                                 wire:model.defer="marketingProduct"
                                 rows="4"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 placeholder="{{ __('e.g., a high-end coffee maker that brews in 30 seconds...') }}"
                             ></textarea>
                             @error('marketingProduct')
@@ -459,7 +459,7 @@ MARKDOWN;
                                     id="marketing-audience"
                                     type="text"
                                     wire:model.defer="marketingAudience"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                     placeholder="{{ __('e.g., busy professionals, coffee lovers...') }}"
                                 />
                             </div>
@@ -469,7 +469,7 @@ MARKDOWN;
                                     id="marketing-keywords"
                                     type="text"
                                     wire:model.defer="marketingKeywords"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                     placeholder="{{ __('e.g., quick, premium, morning coffee') }}"
                                 />
                             </div>
@@ -481,7 +481,7 @@ MARKDOWN;
                                 <select
                                     id="marketing-tone"
                                     wire:model="marketingTone"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($tones as $tone)
                                         <option value="{{ $tone }}">{{ $tone }}</option>
@@ -493,7 +493,7 @@ MARKDOWN;
                                 <select
                                     id="marketing-language"
                                     wire:model="marketingLanguage"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($languages as $language)
                                         <option value="{{ $language }}">{{ $language }}</option>
@@ -508,7 +508,7 @@ MARKDOWN;
                             type="button"
                             wire:click="generateMarketingCopy"
                             wire:loading.attr="disabled"
-                            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-70"
+                            class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                         >
                             <span wire:loading.remove wire:target="generateMarketingCopy">{{ __('Generate Copy') }}</span>
                             <span wire:loading wire:target="generateMarketingCopy">{{ __('Generating...') }}</span>
@@ -532,22 +532,22 @@ MARKDOWN;
                         @if ($marketingOutput)
                             <article class="prose max-w-none text-zinc-800 dark:prose-invert dark:text-zinc-100">
                                 <h3>{{ $marketingOutput['headline'] }}</h3>
-                                <p>{{ $marketingOutput['body'] }}</p>
-                                <p><strong>{{ __('Call to Action:') }}</strong> {{ $marketingOutput['cta'] }}</p>
-                                @if (!empty($marketingOutput['keywords']))
-                                    <p class="mt-4 text-xs uppercase tracking-wide text-purple-500">{{ __('Suggested Keywords:') }}</p>
-                                    <div class="mt-2 flex flex-wrap gap-2">
-                                        @foreach ($marketingOutput['keywords'] as $keyword)
-                                            <span class="rounded-full bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 dark:bg-purple-500/10 dark:text-purple-200">{{ $keyword }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
+                            <p>{{ $marketingOutput['body'] }}</p>
+                            <p><strong>{{ __('Call to Action:') }}</strong> {{ $marketingOutput['cta'] }}</p>
+                            @if (!empty($marketingOutput['keywords']))
+                                <p class="mt-4 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-300">{{ __('Suggested Keywords:') }}</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    @foreach ($marketingOutput['keywords'] as $keyword)
+                                        <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">{{ $keyword }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
                             </article>
                         @else
-                            <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                                <flux:icon.speaker-wave variant="outline" class="size-10 text-purple-300 dark:text-purple-400" />
-                                <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated marketing copy will appear here.') }}</p>
-                            </div>
+                        <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
+                            <flux:icon.speaker-wave variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated marketing copy will appear here.') }}</p>
+                        </div>
                         @endif
                     </div>
                 </div>
@@ -567,13 +567,13 @@ MARKDOWN;
                             <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="product-photo">{{ __('Upload Product Photo') }}</label>
                             <label
                                 for="product-photo"
-                                class="flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-500 transition hover:border-purple-400 hover:text-purple-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:border-purple-400 dark:hover:text-purple-300"
+                                class="flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-200"
                             >
                                 @if ($productPhoto)
                                     <img src="{{ $productPhoto->temporaryUrl() }}" alt="{{ __('Uploaded preview') }}" class="h-32 w-32 rounded-lg object-cover shadow-sm" />
                                     <span class="mt-3 text-xs text-zinc-400">{{ __('Click to change image') }}</span>
                                 @else
-                                    <flux:icon.photo variant="outline" class="mb-3 size-10 text-purple-300" />
+                                    <flux:icon.photo variant="outline" class="mb-3 size-10 text-zinc-300" />
                                     <span class="text-sm font-medium">{{ __('Upload image') }}</span>
                                     <span class="mt-1 text-xs text-zinc-400">{{ __('PNG or JPG up to 5MB') }}</span>
                                 @endif
@@ -590,7 +590,7 @@ MARKDOWN;
                                 id="product-description"
                                 wire:model.defer="productDescription"
                                 rows="4"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 placeholder="{{ __('e.g., Organic coffee beans from Brazil, single-origin, rich aroma...') }}"
                             ></textarea>
                             @error('productDescription')
@@ -604,7 +604,7 @@ MARKDOWN;
                                 <select
                                     id="story-vibe"
                                     wire:model="storyVibe"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($storyVibes as $vibe)
                                         <option value="{{ $vibe }}">{{ $vibe }}</option>
@@ -616,7 +616,7 @@ MARKDOWN;
                                 <select
                                     id="story-lighting"
                                     wire:model="storyLighting"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($storyLightings as $lighting)
                                         <option value="{{ $lighting }}">{{ $lighting }}</option>
@@ -631,7 +631,7 @@ MARKDOWN;
                                 <select
                                     id="story-content-type"
                                     wire:model="storyContentType"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($storyContentTypes as $type)
                                         <option value="{{ $type }}">{{ $type }}</option>
@@ -643,7 +643,7 @@ MARKDOWN;
                                 <select
                                     id="story-language"
                                     wire:model="storyLanguage"
-                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($languages as $language)
                                         <option value="{{ $language }}">{{ $language }}</option>
@@ -658,7 +658,7 @@ MARKDOWN;
                             type="button"
                             wire:click="generateStoryline"
                             wire:loading.attr="disabled"
-                            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-70"
+                            class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                         >
                             <span wire:loading.remove wire:target="generateStoryline">{{ __('Generate Storyline') }}</span>
                             <span wire:loading wire:target="generateStoryline">{{ __('Generating...') }}</span>
@@ -688,12 +688,12 @@ MARKDOWN;
                                     </div>
                                 @endforeach
                             </div>
-                        @else
-                            <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                                <flux:icon.video-camera variant="outline" class="size-10 text-purple-300 dark:text-purple-400" />
-                                <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated storyboard will appear here.') }}</p>
-                            </div>
-                        @endif
+                    @else
+                        <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
+                            <flux:icon.video-camera variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated storyboard will appear here.') }}</p>
+                        </div>
+                    @endif
                     </div>
                 </div>
             </div>
