@@ -112,4 +112,10 @@ class Index extends Component
             'statuses' => $this->statuses,
         ]);
     }
+
+    public function showDetails($logId)
+    {
+        $this->selectedLog = AiActivityLog::where('user_id', auth()->id())->findOrFail($logId);
+        $this->showDetailModal = true;
+    }
 }

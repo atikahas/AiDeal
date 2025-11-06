@@ -280,26 +280,26 @@
                     </div>
                     
                     <!-- Content -->
-                    <div class="px-6 py-5">
+                    <div class="px-6 py-5 max-h-[calc(100vh-12rem)] overflow-y-auto">
                         @if($selectedLog)
                             <div class="space-y-6">
                                 <!-- Stats Grid -->
-                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white px-4 py-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-6">
+                                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-4">
                                         <dt class="truncate text-sm font-medium text-zinc-500 dark:text-zinc-400">Activity Type</dt>
                                         <dd class="mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
                                             {{ $selectedLog->activity_type }}
                                         </dd>
                                     </div>
                                     
-                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white px-4 py-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-6">
+                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-4">
                                         <dt class="truncate text-sm font-medium text-zinc-500 dark:text-zinc-400">Model</dt>
                                         <dd class="mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
                                             {{ $selectedLog->model }}
                                         </dd>
                                     </div>
                                     
-                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white px-4 py-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-6">
+                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-4">
                                         <dt class="truncate text-sm font-medium text-zinc-500 dark:text-zinc-400">Status</dt>
                                         <dd class="mt-1">
                                             @if($selectedLog->status === 'success')
@@ -321,7 +321,7 @@
                                         </dd>
                                     </div>
                                     
-                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white px-4 py-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-6">
+                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-4">
                                         <dt class="truncate text-sm font-medium text-zinc-500 dark:text-zinc-400">Date</dt>
                                         <dd class="mt-1 text-base font-medium text-zinc-900 dark:text-white">
                                             {{ $selectedLog->created_at->format('M d, Y') }}
@@ -329,14 +329,14 @@
                                         </dd>
                                     </div>
                                     
-                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white px-4 py-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-6">
+                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-4">
                                         <dt class="truncate text-sm font-medium text-zinc-500 dark:text-zinc-400">Tokens</dt>
                                         <dd class="mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
                                             {{ number_format($selectedLog->token_count) }}
                                         </dd>
                                     </div>
                                     
-                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white px-4 py-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-6">
+                                    <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 sm:p-4">
                                         <dt class="truncate text-sm font-medium text-zinc-500 dark:text-zinc-400">Latency</dt>
                                         <dd class="mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
                                             {{ $selectedLog->latency_ms ? number_format($selectedLog->latency_ms) . ' ms' : 'N/A' }}
@@ -349,12 +349,30 @@
                                     <div class="flex items-center justify-between">
                                         <h4 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Prompt</h4>
                                         <button type="button" 
-                                                @click="copyToClipboard('{{ addslashes($selectedLog->prompt) }}')" 
+                                                x-data="{ copySuccess: false }"
+                                                @click="
+                                                    navigator.clipboard.writeText(@js($selectedLog->prompt)).then(() => {
+                                                        copySuccess = true;
+                                                        setTimeout(() => copySuccess = false, 2000);
+                                                    });
+                                                "
                                                 class="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-600 dark:hover:bg-zinc-700">
-                                            <svg class="mr-1.5 h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
-                                            </svg>
-                                            Copy
+                                            <template x-if="!copySuccess">
+                                                <span class="flex items-center">
+                                                    <svg class="mr-1.5 h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                                    </svg>
+                                                    Copy
+                                                </span>
+                                            </template>
+                                            <template x-if="copySuccess">
+                                                <span class="flex items-center text-green-600 dark:text-green-400">
+                                                    <svg class="mr-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Copied!
+                                                </span>
+                                            </template>
                                         </button>
                                     </div>
                                     <div class="mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
@@ -367,12 +385,30 @@
                                         <div class="flex items-center justify-between">
                                             <h4 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Output</h4>
                                             <button type="button" 
-                                                    @click="copyToClipboard('{{ addslashes($selectedLog->output) }}')" 
+                                                    x-data="{ copySuccess: false }"
+                                                    @click="
+                                                        navigator.clipboard.writeText(@js($selectedLog->output)).then(() => {
+                                                            copySuccess = true;
+                                                            setTimeout(() => copySuccess = false, 2000);
+                                                        });
+                                                    "
                                                     class="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-600 dark:hover:bg-zinc-700">
-                                                <svg class="mr-1.5 h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
-                                                </svg>
-                                                Copy
+                                                <template x-if="!copySuccess">
+                                                    <span class="flex items-center">
+                                                        <svg class="mr-1.5 h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                                        </svg>
+                                                        Copy
+                                                    </span>
+                                                </template>
+                                                <template x-if="copySuccess">
+                                                    <span class="flex items-center text-green-600 dark:text-green-400">
+                                                        <svg class="mr-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Copied!
+                                                    </span>
+                                                </template>
                                             </button>
                                         </div>
                                         <div class="mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
@@ -395,12 +431,30 @@
                                         <div class="flex items-center justify-between">
                                             <h4 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Metadata</h4>
                                             <button type="button" 
-                                                    @click="copyToClipboard(JSON.stringify({{ json_encode($selectedLog->meta) }}, null, 2))" 
+                                                    x-data="{ copySuccess: false }"
+                                                    @click="
+                                                        navigator.clipboard.writeText(JSON.stringify(@js($selectedLog->meta), null, 2)).then(() => {
+                                                            copySuccess = true;
+                                                            setTimeout(() => copySuccess = false, 2000);
+                                                        });
+                                                    "
                                                     class="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-600 dark:hover:bg-zinc-700">
-                                                <svg class="mr-1.5 h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
-                                                </svg>
-                                                Copy
+                                                <template x-if="!copySuccess">
+                                                    <span class="flex items-center">
+                                                        <svg class="mr-1.5 h-3.5 w-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                                        </svg>
+                                                        Copy
+                                                    </span>
+                                                </template>
+                                                <template x-if="copySuccess">
+                                                    <span class="flex items-center text-green-600 dark:text-green-400">
+                                                        <svg class="mr-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Copied!
+                                                    </span>
+                                                </template>
                                             </button>
                                         </div>
                                         <div class="mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
@@ -425,25 +479,4 @@
         </div>
     </div>
     
-    <!-- Copy to clipboard script -->
-    <script>
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                // Optional: Show a toast or tooltip that text was copied
-                const button = event.target.closest('button');
-                const originalText = button.innerHTML;
-                button.innerHTML = `
-                    <svg class="mr-1.5 h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6-6 6 6m-6-6v13.5" />
-                    </svg>
-                    Copied!
-                `;
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-            });
-        }
-    </script>
 </div>
