@@ -2,9 +2,7 @@
 
 namespace App\Providers;
 
-use App\Actions\Fortify\CreateNewUser;
-use App\Actions\Fortify\ResetUserPassword;
-use Illuminate\Cache\RateLimiting\Limit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -36,8 +34,17 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureActions(): void
     {
-        Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
-        Fortify::createUsersUsing(CreateNewUser::class);
+        // Disable password reset and user registration
+        Fortify::authenticateUsing(function (Request $request) {
+            $user = User::where('email', $request->email)->first();
+
+            if ($user) {
+                // Log the user in without password verification
+                return $user;
+            }
+
+            return null;
+        });
     }
 
     /**
@@ -47,7 +54,6 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::loginView(fn () => view('livewire.auth.login'));
         Fortify::verifyEmailView(fn () => view('livewire.auth.verify-email'));
-        Fortify::twoFactorChallengeView(fn () => view('livewire.auth.two-factor-challenge'));
         Fortify::confirmPasswordView(fn () => view('livewire.auth.confirm-password'));
         Fortify::registerView(fn () => view('livewire.auth.register'));
         Fortify::resetPasswordView(fn () => view('livewire.auth.reset-password'));
