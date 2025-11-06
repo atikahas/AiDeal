@@ -403,28 +403,6 @@ new class extends Component {
         }
     }
 
-    // protected function buildMarketingCopyPrompt(): string
-    // {
-    //     $audience = $this->marketingAudience ?: 'General Audience';
-    //     $keywords = $this->marketingKeywords ?: 'None';
-    //     $tone = $this->marketingTone ?: 'Professional';
-    //     $language = $this->marketingLanguage ?: 'English';
-        
-    //     return "You are an expert marketing copywriter. Generate compelling marketing copy based on the following details.\n" .
-    //            "The final output language must be strictly in {$language}.\n\n" .
-    //            "**Product/Service Details:**\n" .
-    //            "{$this->marketingProduct}\n\n" .
-    //            "**Target Audience:**\n" .
-    //            "{$audience}\n\n" .
-    //            "**Tone of Voice:**\n" .
-    //            "{$tone}\n\n" .
-    //            "**Keywords to include:**\n" .
-    //            "{$keywords}\n\n" .
-    //            "The copy should be engaging, persuasive, and ready for use in social media posts, advertisements, or website content. " .
-    //            "Structure the output clearly with a headline and body.\n\n" .
-    //            "IMPORTANT: All output must be in {$language} language, including the headline, description, and any other text.";
-    // }
-
     protected function buildMarketingCopyPrompt(): string
     {
         $audience = $this->marketingAudience ?: 'General Audience';
