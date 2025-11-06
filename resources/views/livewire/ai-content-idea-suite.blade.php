@@ -668,10 +668,10 @@ new class extends Component {
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <div class="flex flex-wrap gap-2">
             @foreach ([
-                'staff-magika' => __('Staff Magika'),
+                'staff-magika' => __('Magika Persona'),
                 'content-ideas' => __('Content Ideas'),
                 'marketing-copy' => __('Marketing Copy'),
-                'product-storyline' => __('Product Ad Storyline'),
+                // 'product-storyline' => __('Product Ad Storyline'),
             ] as $tabKey => $label)
                 <button
                     type="button"
