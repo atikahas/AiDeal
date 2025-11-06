@@ -48,7 +48,7 @@ new class extends Component {
     public string $storyLanguage = 'English';
     public array $storyOutput = [];
 
-    public array $languages = ['English', 'Malay', 'Spanish', 'German', 'French'];
+    public array $languages = ['English', 'Malay', 'Chinese', 'Tamil'];
     public array $tones = ['Professional', 'Friendly', 'Bold', 'Playful', 'Conversational'];
     public array $storyVibes = ['Random', 'Inspirational', 'Bold', 'Playful', 'Premium'];
     public array $storyLightings = ['Random', 'Bright', 'Moody', 'Natural', 'Studio'];
@@ -84,6 +84,7 @@ new class extends Component {
     {
         $this->validate([
             'staffInput' => ['required', 'string', 'min:10'],
+            'contentLanguage' => ['required', 'string', 'in:English,Malay,Chinese,Tamil'],
         ]);
 
         $agent = collect($this->staffAgents)->firstWhere('key', $this->selectedStaff);
@@ -93,8 +94,25 @@ new class extends Component {
             return;
         }
 
+        // Build the base prompt with role instructions
         $prompt = $this->buildStaffPrompt($agent);
-        $response = $this->geminiService->generateContent($prompt);
+        
+        // Add strict language and role-following instructions
+        $prompt .= "\n\n" . implode("\n", [
+            "INSTRUCTIONS:",
+            "1. You MUST respond in {$this->contentLanguage} language.",
+            "2. You MUST maintain your role as {$agent['name']}, {$agent['role']} in your response.",
+            "3. Do not include any English text unless it's a proper noun or technical term.",
+            "4. Format your response according to the requested structure.",
+            "5. If you're unsure how to say something in {$this->contentLanguage}, ask for clarification rather than defaulting to English.",
+            "6. Use appropriate cultural context and idioms for {$this->contentLanguage} when relevant."
+        ]);
+        
+        $response = $this->geminiService->generateContent($prompt, [
+            'language' => $this->contentLanguage,
+            'temperature' => 0.7,
+            'top_p' => 0.9,
+        ]);
 
         if ($response) {
             $this->staffOutput = $response;
@@ -105,17 +123,166 @@ new class extends Component {
 
     protected function buildStaffPrompt(array $agent): string
     {
-        $persona = $agent
-            ? "You are {$agent['name']}, {$agent['role']}. Your task is to provide expert insights based on the following input:"
-            : 'Please analyze the following input:';
-
-        return "{$persona}\n\n" . 
-               "**Input:** {$this->staffInput}\n\n" .
-               "Provide a detailed analysis with the following sections:\n" .
-               "1. Key Pain Points\n" .
-               "2. Main Opportunities\n" .
-               "3. Recommended Actions\n" .
-               "4. Additional Insights";
+        $agentId = $agent['key'] ?? '';
+        $input = $this->staffInput;
+        $language = $this->contentLanguage;
+        
+        // Common instruction for all agents
+        $commonInstructions = [
+            'language' => $language,
+            'tone' => 'professional but approachable',
+            'format' => 'well-structured with clear sections',
+            'cultural_context' => 'Use appropriate cultural context and examples relevant to the language and region.'
+        ];
+        
+        switch ($agentId) {
+            case 'wan':
+                $prompt = "ROLE: You are Wan, an expert in market research with deep knowledge of {$language} speaking markets.\n\n";
+                $prompt .= "TASK: Based on the product/service \"{$input}\", create a detailed 'Ideal Customer Persona' in {$language}.\n\n";
+                $prompt .= "INCLUDE THESE SECTIONS (in {$language}):\n";
+                $prompt .= "1. DEMOGRAPHICS (Age, Gender, Location, Income, etc.)\n";
+                $prompt .= "2. INTERESTS AND HOBBIES\n";
+                $prompt .= "3. PAIN POINTS AND CHALLENGES\n";
+                $prompt .= "4. GOALS AND MOTIVATIONS\n";
+                $prompt .= "5. BUYING BEHAVIOR\n";
+                $prompt .= "6. PREFERRED COMMUNICATION CHANNELS\n\n";
+                $prompt .= "FORMAT: Use a well-organized format with clear headings for each section. Use numbered or bullet points for better readability.";
+                break;
+                
+            case 'tina':
+                $prompt = "ROLE: You are Tina, a behavioral psychology expert with expertise in {$language} speaking markets.\n\n";
+                $prompt .= "TASK: For the product/service \"{$input}\", analyze and provide the following in {$language}:\n\n";
+                $prompt .= "1. KEY FEARS (What the customer wants to avoid)\n";
+                $prompt .= "2. CORE DESIRES (What the customer wants to achieve)\n";
+                $prompt .= "3. EMOTIONAL TRIGGERS\n";
+                $prompt .= "4. PSYCHOLOGICAL BARRIERS TO PURCHASE\n\n";
+                $prompt .= "FORMAT: Use clear and understandable language and provide examples relevant to the {$language} context.";
+                break;
+                
+            case 'jamil':
+                $prompt = "ROLE: You are Jamil, a marketing strategist specializing in {$language} speaking markets.\n\n";
+                $prompt .= "TASK: For the product/service \"{$input}\", provide 3 distinct marketing angles in {$language}:\n\n";
+                $prompt .= "Each marketing angle should include (in {$language}):\n";
+                $prompt .= "- Target Audience (Who to reach)\n";
+                $prompt .= "- Unique Value (What differentiates this product/service)\n";
+                $prompt .= "- Key Message (What to communicate)\n";
+                $prompt .= "- Potential Channels (Where to promote)\n\n";
+                $prompt .= "FORMAT: Use a clear and organized format for each marketing angle.";
+                break;
+                
+            case 'najwa':
+                $prompt = "ROLE: You are Najwa, a professional copywriter fluent in {$language}.\n\n";
+                $prompt .= "TASK: Write a persuasive marketing copy in {$language} for: \"{$input}\"\n\n";
+                $prompt .= "Focus on benefits, not features. Structure your response with:\n";
+                $prompt .= "1. ATTENTION-GRABBING HEADLINE\n";
+                $prompt .= "2. ENGAGING INTRODUCTION\n";
+                $prompt .= "3. KEY BENEFITS (3-5 points)\n";
+                $prompt .= "4. COMPELLING CALL-TO-ACTION\n\n";
+                $prompt .= "FORMAT: Use persuasive language that aligns with {$language} cultural context.";
+                break;
+                
+            case 'saifuz':
+                $prompt = "ROLE: You are Saifuz, an A/B testing specialist with experience in {$language} markets.\n\n";
+                $prompt .= "TASK: Create 3 variations of this copy in {$language}:\n\n";
+                $prompt .= "Original: {$input}\n\n";
+                $prompt .= "For each variation, include (in {$language}):\n";
+                $prompt .= "- Variation Name/Theme\n";
+                $prompt .= "- Modified Copy\n";
+                $prompt .= "- Why This Might Be More Effective\n\n";
+                $prompt .= "FORMAT: Ensure each variation has a different approach while maintaining proper {$language} language.";
+                break;
+                
+            case 'mieya':
+                $prompt = "ROLE: You are Mieya, an expert in classic marketing formulas, specializing in {$language} copywriting.\n\n";
+                $prompt .= "TASK: Write a marketing copy in {$language} for \"{$input}\" using the AIDA formula.\n\n";
+                $prompt .= "Structure your response with the following sections in {$language}:\n";
+                $prompt .= "1. ATTENTION: Grab attention\n";
+                $prompt .= "2. INTEREST: Build interest\n";
+                $prompt .= "3. DESIRE: Create desire\n";
+                $prompt .= "4. ACTION: Call to action\n\n";
+                $prompt .= "FORMAT: Effectively apply the AIDA formula within the context of {$language} language and culture.";
+                break;
+                
+            case 'afiq':
+                $prompt = "ROLE: You are Afiq, a web content strategist specializing in {$language} conversion optimization.\n\n";
+                $prompt .= "TASK: Outline a high-converting sales page in {$language} for: \"{$input}\"\n\n";
+                $prompt .= "INCLUDE THESE SECTIONS (in {$language}):\n";
+                $prompt .= "1. HERO SECTION (Headline + Subheadline)\n";
+                $prompt .= "2. PROBLEM STATEMENT\n";
+                $prompt .= "3. SOLUTION OVERVIEW\n";
+                $prompt .= "4. KEY FEATURES/BENEFITS\n";
+                $prompt .= "5. TESTIMONIALS/SOCIAL PROOF\n";
+                $prompt .= "6. OFFER DETAILS\n";
+                $prompt .= "7. STRONG CALL-TO-ACTION\n";
+                $prompt .= "8. FAQ SECTION\n\n";
+                $prompt .= "FORMAT: Emphasize elements that are effective for {$language}-speaking audiences.";
+                break;
+                
+            case 'julia':
+                $prompt = "ROLE: You are Julia, a headline specialist with expertise in {$language} copywriting.\n\n";
+                $prompt .= "TASK: Create 10 attention-grabbing headlines in {$language} for: \"{$input}\"\n\n";
+                $prompt .= "For each headline, include (in {$language}):\n";
+                $prompt .= "1. HEADLINE\n";
+                $prompt .= "2. HEADLINE TYPE (e.g., How-to, Question, List, etc.)\n";
+                $prompt .= "3. WHY IT WORKS\n\n";
+                $prompt .= "FORMAT: Ensure the headlines use proper {$language} grammar and style that is engaging and attention-grabbing.";
+                break;
+                
+            case 'mazrul':
+                $prompt = "ROLE: You are Mazrul, a video scriptwriter specializing in {$language} content.\n\n";
+                $prompt .= "TASK: Write a 30-60 second social media ad script in {$language} for: \"{$input}\"\n\n";
+                $prompt .= "INCLUDE THESE ELEMENTS (in {$language}):\n";
+                $prompt .= "1. HOOK (0-5 seconds) - Grab the viewer's attention\n";
+                $prompt .= "2. PROBLEM (5-15 seconds) - Identify the viewer's pain point\n";
+                $prompt .= "3. SOLUTION (15-30 seconds) - Show how the product/service solves the problem\n";
+                $prompt .= "4. CALL-TO-ACTION (30-60 seconds) - Provide clear instructions\n\n";
+                $prompt .= "FORMAT: Write the full script in {$language} and provide visual direction for each section in [square brackets]. Use language suitable for short, engaging videos.";
+                break;
+                
+            case 'musa':
+                $prompt = "ROLE: You are Musa, a personal branding coach with expertise in {$language} professional communication.\n\n";
+                $prompt .= "TASK: Create a compelling personal branding post in {$language} about: \"{$input}\"\n\n";
+                $prompt .= "STRUCTURE YOUR RESPONSE WITH THESE SECTIONS (in {$language}):\n";
+                $prompt .= "1. ENGAGING INTRODUCTION - Start with an attention-grabbing statement\n";
+                $prompt .= "2. PERSONAL STORY - Share a relevant personal experience\n";
+                $prompt .= "3. VALUABLE INSIGHT - Provide useful advice or perspective\n";
+                $prompt .= "4. CALL-TO-ENGAGEMENT - End with a question or call-to-action\n\n";
+                $prompt .= "FORMAT: Use a tone appropriate for professional social media platforms in {$language}.";
+                break;
+                
+            case 'joe':
+                $prompt = "ROLE: You are Joe, an AI art prompt engineer with expertise in {$language} visual concepts.\n\n";
+                $prompt .= "TASK: Create a detailed prompt in {$language} for generating an image about: \"{$input}\"\n\n";
+                $prompt .= "INCLUDE THESE ELEMENTS (in {$language}):\n";
+                $prompt .= "1. SUBJECT DESCRIPTION - Clearly explain what should be depicted\n";
+                $prompt .= "2. STYLE (e.g., realistic, watercolor, digital art, etc.)\n";
+                $prompt .= "3. LIGHTING - Type and direction of light\n";
+                $prompt .= "4. COMPOSITION - Arrangement of elements in the image\n";
+                $prompt .= "5. COLOR PALETTE - Desired color combinations\n";
+                $prompt .= "6. MOOD/EMOTION - Feeling to be conveyed\n\n";
+                $prompt .= "FORMAT: Provide clear and detailed instructions in {$language} that are easy for AI to understand.";
+                break;
+                
+            case 'zaki':
+                $prompt = "ROLE: You are Zaki, a graphic design expert specializing in {$language} promotional materials.\n\n";
+                $prompt .= "TASK: Create a detailed prompt in {$language} for a promotional poster about: \"{$input}\"\n\n";
+                $prompt .= "INCLUDE THESE SPECIFICATIONS (in {$language}):\n";
+                $prompt .= "1. LAYOUT STRUCTURE - How elements should be arranged\n";
+                $prompt .= "2. COLOR SCHEME - Appropriate color combinations\n";
+                $prompt .= "3. TYPOGRAPHY - Font types and styles\n";
+                $prompt .= "4. KEY VISUAL ELEMENTS - Main images or graphics\n";
+                $prompt .= "5. TEXT PLACEMENT - Where and how text should be positioned\n";
+                $prompt .= "6. OVERALL STYLE - Theme and overall aesthetic\n\n";
+                $prompt .= "FORMAT: Provide clear and detailed instructions in {$language} for creating an effective promotional poster.";
+                break;
+                
+            default:
+                $prompt = "Please analyze the following input and provide a helpful response in {$language}:\n\n";
+                $prompt .= $input;
+                break;
+        }
+        
+        return $prompt;
     }
 
     protected function generateStaffInsight(string $type): string
@@ -163,7 +330,8 @@ new class extends Component {
                "2. A unique angle or perspective (1-2 sentences)\n" .
                "3. A hook to capture attention (1 sentence)\n\n" .
                "Format the response as a numbered list with each idea separated by two newlines.\n" .
-               "Output in {$this->contentLanguage} language with a {$this->marketingTone} tone.";
+               "Output in {$this->contentLanguage} language with a {$this->marketingTone} tone.\n" .
+               "IMPORTANT: All output must be in {$this->contentLanguage} language, including all titles, angles, and hooks.";
     }
 
     protected function parseContentIdeasResponse(string $response): void
@@ -240,17 +408,17 @@ new class extends Component {
         $audience = $this->marketingAudience ?: 'potential customers';
         $keywords = $this->marketingKeywords ? "Focus on these keywords: {$this->marketingKeywords}" : '';
         
-        return "Create marketing copy with the following details:\n\n" .
-               "**Product/Service:** {$this->marketingProduct}\n" .
-               "**Target Audience:** {$audience}\n" .
-               "**Tone:** {$this->marketingTone}\n" .
-               "**Language:** {$this->marketingLanguage}\n" .
-               "{$keywords}\n\n" .
+        return "Create a compelling marketing copy with the following details:\n\n" .
+               "Product/Service: {$this->marketingProduct}\n" . 
+               "Target Audience: {$this->marketingAudience}\n" .
+               "Key Features/Keywords: {$this->marketingKeywords}\n\n" .
+               "Tone: {$this->marketingTone}\n" .
+               "Language: {$this->marketingLanguage}\n\n" .
                "Please provide:\n" .
-               "1. A compelling headline\n" .
-               "2. Engaging body copy (2-3 short paragraphs)\n" .
-               "3. A strong call-to-action\n" .
-               "4. 3-5 relevant hashtags";
+               "1. A catchy headline\n" . 
+               "2. A short description (50-100 words)\n" .
+               "3. 3-5 key benefits as bullet points\n\n" .
+               "IMPORTANT: All output must be in {$this->marketingLanguage} language, including the headline, description, and bullet points.";
     }
 
     protected function parseMarketingCopyResponse(string $response): void
@@ -648,9 +816,13 @@ new class extends Component {
                             <div class="grid gap-4">
                                 @foreach ($contentIdeasOutput as $idea)
                                     <div class="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-                                        <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">{{ $idea['title'] }}</h3>
-                                        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{{ $idea['angle'] }}</p>
-                                        <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ $idea['hook'] }}</p>
+                                        <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">{{ $idea['title'] ?? 'No title' }}</h3>
+                                        @if(isset($idea['angle']))
+                                            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{{ $idea['angle'] }}</p>
+                                        @endif
+                                        @if(isset($idea['hook']))
+                                            <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ $idea['hook'] }}</p>
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>

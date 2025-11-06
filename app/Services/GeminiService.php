@@ -58,10 +58,25 @@ class GeminiService
         try {
             $url = "{$this->baseUrl}/models/{$this->model}:generateContent?key={$this->apiKey}";
             
+            // Add language instruction to the beginning of the prompt
+            $language = $options['language'] ?? 'English';
+            $systemInstruction = [
+                'role' => 'user',
+                'parts' => [
+                    ['text' => "You are a helpful assistant that responds in {$language}. " .
+                              "IMPORTANT: You MUST respond in {$language} language. " .
+                              "Do not include any English text in your response unless it's a proper noun or technical term that doesn't have a direct translation."]
+                ]
+            ];
+            
             $payload = [
                 'contents' => [
-                    'parts' => [
-                        ['text' => $prompt]
+                    $systemInstruction,
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
                     ]
                 ],
                 'generationConfig' => [
@@ -70,6 +85,26 @@ class GeminiService
                     'topP' => $options['top_p'] ?? 0.95,
                     'maxOutputTokens' => $options['max_tokens'] ?? 2048,
                 ],
+            ];
+            
+            // Add safety settings to avoid content filtering issues
+            $payload['safetySettings'] = [
+                [
+                    'category' => 'HARM_CATEGORY_HARASSMENT',
+                    'threshold' => 'BLOCK_NONE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                    'threshold' => 'BLOCK_NONE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    'threshold' => 'BLOCK_NONE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    'threshold' => 'BLOCK_NONE'
+                ]
             ];
 
             $this->logDebug('Sending request to Gemini API', [
