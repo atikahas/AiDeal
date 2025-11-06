@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\GeminiService;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Livewire\Volt\Component;
@@ -54,6 +55,12 @@ new class extends Component {
     public array $storyContentTypes = ['Random', 'Product Ad', 'Founder Story', 'Tutorial', 'Lifestyle'];
 
     protected string $layout = 'layouts.app';
+    protected GeminiService $geminiService;
+
+    public function boot(GeminiService $geminiService)
+    {
+        $this->geminiService = $geminiService;
+    }
 
     public function withLayoutData(): array
     {
@@ -80,22 +87,35 @@ new class extends Component {
         ]);
 
         $agent = collect($this->staffAgents)->firstWhere('key', $this->selectedStaff);
+        
+        if (!$this->geminiService->testConnection()) {
+            session()->flash('error', 'Unable to connect to Gemini API. Please check your API key.');
+            return;
+        }
 
-        $personaHeading = $agent
-            ? sprintf('%s — %s', $agent['name'], $agent['role'])
-            : __('Selected Agent');
+        $prompt = $this->buildStaffPrompt($agent);
+        $response = $this->geminiService->generateContent($prompt);
 
-        $this->staffOutput = <<<MARKDOWN
-### {$personaHeading}
+        if ($response) {
+            $this->staffOutput = $response;
+        } else {
+            session()->flash('error', 'Failed to generate content. Please try again.');
+        }
+    }
 
-**Focus Input**
-{$this->staffInput}
+    protected function buildStaffPrompt(array $agent): string
+    {
+        $persona = $agent
+            ? "You are {$agent['name']}, {$agent['role']}. Your task is to provide expert insights based on the following input:"
+            : 'Please analyze the following input:';
 
-**Key Insights**
-1. {$this->generateStaffInsight('Pain point')}
-2. {$this->generateStaffInsight('Opportunity')}
-3. {$this->generateStaffInsight('Call to action')}
-MARKDOWN;
+        return "{$persona}\n\n" . 
+               "**Input:** {$this->staffInput}\n\n" .
+               "Provide a detailed analysis with the following sections:\n" .
+               "1. Key Pain Points\n" .
+               "2. Main Opportunities\n" .
+               "3. Recommended Actions\n" .
+               "4. Additional Insights";
     }
 
     protected function generateStaffInsight(string $type): string
@@ -120,18 +140,70 @@ MARKDOWN;
             'contentTopic' => ['required', 'string', 'min:4'],
         ]);
 
-        $keyword = Str::headline($this->contentTopic);
+        if (!$this->geminiService->testConnection()) {
+            $this->addError('contentTopic', 'Unable to connect to Gemini API. Please check your API key.');
+            return;
+        }
 
-        $this->contentIdeasOutput = collect(range(1, 5))
-            ->map(fn ($index) => [
-                'title' => "{$keyword}: Idea {$index}",
-                'angle' => __('Fresh talking point #:index around :topic', [
-                    'index' => $index,
-                    'topic' => strtolower($keyword),
-                ]),
-                'hook' => __('Hook your audience with a quick win or trend-backed insight.'),
-            ])
-            ->all();
+        $prompt = $this->buildContentIdeasPrompt();
+        $response = $this->geminiService->generateContent($prompt);
+
+        if ($response) {
+            $this->parseContentIdeasResponse($response);
+        } else {
+            $this->addError('contentTopic', 'Failed to generate content ideas. Please try again.');
+        }
+    }
+
+    protected function buildContentIdeasPrompt(): string
+    {
+        return "Generate 5 engaging content ideas about: {$this->contentTopic}\n\n" .
+               "For each idea, provide:\n" .
+               "1. A catchy title (max 10 words)\n" .
+               "2. A unique angle or perspective (1-2 sentences)\n" .
+               "3. A hook to capture attention (1 sentence)\n\n" .
+               "Format the response as a numbered list with each idea separated by two newlines.\n" .
+               "Output in {$this->contentLanguage} language with a {$this->marketingTone} tone.";
+    }
+
+    protected function parseContentIdeasResponse(string $response): void
+    {
+        $ideas = [];
+        $lines = explode("\n", $response);
+        $currentIdea = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                if (!empty($currentIdea)) {
+                    $ideas[] = $currentIdea;
+                    $currentIdea = [];
+                }
+                continue;
+            }
+
+            if (preg_match('/^\d+\.\s*(.+)/', $line, $matches)) {
+                if (!empty($currentIdea)) {
+                    $ideas[] = $currentIdea;
+                }
+                $currentIdea = ['title' => $matches[1]];
+            } elseif (preg_match('/^[A-Za-z\s]+:/', $line)) {
+                // Skip section headers
+                continue;
+            } elseif (!empty($currentIdea)) {
+                if (!isset($currentIdea['angle'])) {
+                    $currentIdea['angle'] = $line;
+                } elseif (!isset($currentIdea['hook'])) {
+                    $currentIdea['hook'] = $line;
+                }
+            }
+        }
+
+        if (!empty($currentIdea)) {
+            $ideas[] = $currentIdea;
+        }
+
+        $this->contentIdeasOutput = array_slice($ideas, 0, 5);
     }
 
     public function resetContentIdeas(): void
@@ -148,21 +220,101 @@ MARKDOWN;
             'marketingTone' => ['required', 'string'],
         ]);
 
-        $audience = $this->marketingAudience ?: __('busy decision makers');
-        $keywords = array_filter(array_map('trim', explode(',', $this->marketingKeywords)));
+        if (!$this->geminiService->testConnection()) {
+            $this->addError('marketingProduct', 'Unable to connect to Gemini API. Please check your API key.');
+            return;
+        }
 
-        $this->marketingOutput = [
-            'headline' => Str::headline($this->marketingProduct),
-            'body' => __(
-                'Hey :audience, meet :product — designed to solve your biggest challenge in under 10 minutes.',
-                [
-                    'audience' => strtolower($audience),
-                    'product' => strtolower($this->marketingProduct),
-                ],
-            ),
-            'cta' => __('Start your free trial today and see instant results.'),
-            'keywords' => $keywords,
+        $prompt = $this->buildMarketingCopyPrompt();
+        $response = $this->geminiService->generateContent($prompt);
+
+        if ($response) {
+            $this->parseMarketingCopyResponse($response);
+        } else {
+            $this->addError('marketingProduct', 'Failed to generate marketing copy. Please try again.');
+        }
+    }
+
+    protected function buildMarketingCopyPrompt(): string
+    {
+        $audience = $this->marketingAudience ?: 'potential customers';
+        $keywords = $this->marketingKeywords ? "Focus on these keywords: {$this->marketingKeywords}" : '';
+        
+        return "Create marketing copy with the following details:\n\n" .
+               "**Product/Service:** {$this->marketingProduct}\n" .
+               "**Target Audience:** {$audience}\n" .
+               "**Tone:** {$this->marketingTone}\n" .
+               "**Language:** {$this->marketingLanguage}\n" .
+               "{$keywords}\n\n" .
+               "Please provide:\n" .
+               "1. A compelling headline\n" .
+               "2. Engaging body copy (2-3 short paragraphs)\n" .
+               "3. A strong call-to-action\n" .
+               "4. 3-5 relevant hashtags";
+    }
+
+    protected function parseMarketingCopyResponse(string $response): void
+    {
+        $lines = explode("\n", $response);
+        $output = [
+            'headline' => '',
+            'body' => '',
+            'cta' => '',
+            'hashtags' => []
         ];
+
+        $currentSection = null;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            // Check for section headers
+            if (preg_match('/^\d+\.\s*(.+?):?$/i', $line, $matches)) {
+                $section = strtolower($matches[1]);
+                if (str_contains($section, 'headline')) {
+                    $currentSection = 'headline';
+                    $output['headline'] = trim(str_ireplace(['headline', '1.', ':'], '', $line), " \t\n\r\0\x0B:");
+                } elseif (str_contains($section, 'body') || str_contains($section, 'copy')) {
+                    $currentSection = 'body';
+                } elseif (str_contains($section, 'call') || str_contains($section, 'cta')) {
+                    $currentSection = 'cta';
+                } elseif (str_contains($section, 'hashtag')) {
+                    $currentSection = 'hashtags';
+                }
+            } else {
+                // Add content to the current section
+                if ($currentSection === 'body') {
+                    $output['body'] .= $line . "\n\n";
+                } elseif ($currentSection === 'cta' && empty($output['cta'])) {
+                    $output['cta'] = $line;
+                } elseif ($currentSection === 'hashtags') {
+                    preg_match_all('/#(\w+)/', $line, $matches);
+                    if (!empty($matches[1])) {
+                        $output['hashtags'] = array_merge($output['hashtags'], $matches[1]);
+                    }
+                } elseif ($currentSection === 'headline' && empty($output['headline'])) {
+                    $output['headline'] = $line;
+                }
+            }
+        }
+
+        // Clean up the body text
+        $output['body'] = trim($output['body']);
+        
+        // Ensure we have at least some default values
+        if (empty($output['headline'])) {
+            $output['headline'] = Str::headline($this->marketingProduct);
+        }
+        if (empty($output['cta'])) {
+            $output['cta'] = __('Start your free trial today and see instant results.');
+        }
+        if (empty($output['hashtags'])) {
+            $keywords = array_filter(array_map('trim', explode(',', $this->marketingKeywords)));
+            $output['hashtags'] = array_slice($keywords, 0, 3);
+        }
+
+        $this->marketingOutput = $output;
     }
 
     public function resetMarketingCopy(): void
@@ -182,27 +334,96 @@ MARKDOWN;
             'productDescription' => ['required', 'string', 'min:10'],
         ]);
 
-        $base = Str::headline($this->productDescription);
+        if (!$this->geminiService->testConnection()) {
+            $this->addError('productDescription', 'Unable to connect to Gemini API. Please check your API key.');
+            return;
+        }
 
-        $this->storyOutput = [
-            [
-                'label' => __('Scene 1'),
-                'description' => __('Opening hero shot showcasing :base with :lighting lighting and :vibe energy.', [
-                    'base' => strtolower($base),
-                    'lighting' => strtolower($this->storyLighting),
-                    'vibe' => strtolower($this->storyVibe),
-                ]),
-            ],
-            [
-                'label' => __('Scene 2'),
-                'description' => __('Demonstrate the core benefit in action with quick cut visuals and bold captions.'),
-            ],
-            [
-                'label' => __('Scene 3'),
-                'description' => __('End with a confident CTA overlay inviting viewers to experience :base today.', [
-                    'base' => strtolower($base),
-                ]),
-            ],
+        $prompt = $this->buildStorylinePrompt();
+        $response = $this->geminiService->generateContent($prompt);
+
+        if ($response) {
+            $this->parseStorylineResponse($response);
+        } else {
+            $this->addError('productDescription', 'Failed to generate storyline. Please try again.');
+        }
+    }
+
+    protected function buildStorylinePrompt(): string
+    {
+        $vibe = $this->storyVibe !== 'Random' ? " with a {$this->storyVibe} vibe" : '';
+        $lighting = $this->storyLighting !== 'Random' ? " with {$this->storyLighting} lighting" : '';
+        $contentType = $this->storyContentType !== 'Random' ? " in the style of a {$this->storyContentType}" : '';
+
+        return "Create a 3-scene video ad concept for: {$this->productDescription}\n\n" .
+               "**Style:**{$vibe}{$lighting}{$contentType}\n" .
+               "**Language:** {$this->storyLanguage}\n\n" .
+               "For each scene, provide:\n" .
+               "1. A brief visual description\n" .
+               "2. Suggested camera angles/movements\n" .
+               "3. Key text or voiceover points\n\n" .
+               "Format as a numbered list with clear scene separators.";
+    }
+
+    protected function parseStorylineResponse(string $response): void
+    {
+        $scenes = [];
+        $currentScene = [];
+        $sceneNumber = 1;
+        $lines = explode("\n", $response);
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Look for scene markers (e.g., "Scene 1:", "1.", etc.)
+            if (preg_match('/^(?:Scene\s*)?(\d+)[:\.]\s*(.+)?/i', $line, $matches)) {
+                if (!empty($currentScene)) {
+                    $scenes[] = $this->formatScene($currentScene, $sceneNumber++);
+                }
+                $currentScene = [
+                    'label' => __('Scene :number', ['number' => $matches[1]]),
+                    'description' => $matches[2] ?? '',
+                    'details' => []
+                ];
+            } elseif (!empty($currentScene)) {
+                // Add details to the current scene
+                if (preg_match('/-\s*(.+)/', $line, $detailMatch)) {
+                    $currentScene['details'][] = $detailMatch[1];
+                } elseif (!empty($line)) {
+                    $currentScene['description'] .= (empty($currentScene['description']) ? '' : ' ') . $line;
+                }
+            }
+        }
+
+        // Add the last scene if it exists
+        if (!empty($currentScene)) {
+            $scenes[] = $this->formatScene($currentScene, $sceneNumber);
+        }
+
+        // Ensure we have at least 3 scenes
+        while (count($scenes) < 3) {
+            $scenes[] = [
+                'label' => __('Scene :number', ['number' => count($scenes) + 1]),
+                'description' => __('Scene description will be generated here.'),
+                'details' => []
+            ];
+        }
+
+        $this->storyOutput = array_slice($scenes, 0, 3);
+    }
+
+    protected function formatScene(array $scene, int $number): array
+    {
+        $description = trim($scene['description']);
+        
+        // Add details to the description if available
+        if (!empty($scene['details'])) {
+            $description .= "\n\n" . implode("\n", array_map(fn($d) => "• {$d}", $scene['details']));
+        }
+
+        return [
+            'label' => __('Scene :number', ['number' => $number]),
+            'description' => $description,
         ];
     }
 
@@ -219,6 +440,21 @@ MARKDOWN;
 }; ?>
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+    @if (session()->has('error'))
+        <div class="rounded-md bg-red-50 p-4 dark:bg-red-900/30">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800 dark:text-red-200">{{ session('error') }}</h3>
+                </div>
+            </div>
+        </div>
+    @endif
+    
     <div class="flex flex-col gap-2">
         <h1 class="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">{{ __('AI Content Idea Suite') }}</h1>
         <p class="max-w-3xl text-sm text-zinc-500 dark:text-zinc-400">
