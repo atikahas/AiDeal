@@ -143,11 +143,9 @@ new class extends Component {
         $message = '';
 
         try {
-            $apiKeyDecrypted = decrypt($apiKey->secret);
-            
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKeyDecrypted, [
+            ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKey->secret, [
                 'contents' => [
                     'parts' => [
                         ['text' => 'Hello']
@@ -312,7 +310,7 @@ new class extends Component {
                 </div>
             @endif
 
-            <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex flex-col gap-2">
                     <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{{ __('Select Active API Key') }}</h3>
                     <p class="text-sm text-zinc-500 dark:text-zinc-400">
@@ -416,7 +414,7 @@ new class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex flex-col gap-2">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
@@ -476,7 +474,7 @@ new class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex flex-col gap-2">
                     <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{{ __('Add a New API Key') }}</h3>
                     <p class="text-sm text-zinc-500 dark:text-zinc-400">
