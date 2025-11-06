@@ -29,6 +29,7 @@ new class extends Component {
     public string $selectedStaff = 'wan';
     public string $staffInput = '';
     public ?string $staffOutput = null;
+    public ?string $staffRawResponse = null;
 
     public string $contentTopic = '';
     public string $contentLanguage = 'English';
@@ -40,6 +41,7 @@ new class extends Component {
     public string $marketingTone = 'Professional';
     public string $marketingLanguage = 'English';
     public ?array $marketingOutput = null;
+    public ?string $marketingRawResponse = null;
 
     public ?\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $productPhoto = null;
     public string $productDescription = '';
@@ -48,6 +50,7 @@ new class extends Component {
     public string $storyContentType = 'Random';
     public string $storyLanguage = 'English';
     public array $storyOutput = [];
+    public ?string $storyRawResponse = null;
 
     public array $languages = ['English', 'Malay', 'Chinese', 'Tamil'];
     public array $tones = ['Professional', 'Friendly', 'Bold', 'Playful', 'Conversational'];
@@ -117,14 +120,15 @@ new class extends Component {
             ]);
 
             if ($response) {
+                $this->staffRawResponse = $response;
                 $this->staffOutput = $response;
                 
-                // Log successful activity
+                // Log successful generation
                 AiActivityLogger::log(
-                    activityType: 'content_generation',
+                    activityType: 'staff_output_generated',
                     model: 'gemini-2.5-flash',
-                    prompt: $this->staffInput,
-                    output: $this->staffOutput,
+                    prompt: $prompt,
+                    output: $response,
                     tokenCount: (int)(strlen($response) / 4), // Rough estimate of token count
                     status: 'success',
                     meta: [
@@ -141,9 +145,9 @@ new class extends Component {
         } catch (\Exception $e) {
             // Log error activity
             AiActivityLogger::log(
-                activityType: 'content_generation',
+                activityType: 'staff_output_generated',
                 model: 'gemini-2.5-flash',
-                prompt: $this->staffInput,
+                prompt: $prompt,
                 status: 'error',
                 errorMessage: $e->getMessage(),
                 meta: [
@@ -338,12 +342,14 @@ new class extends Component {
     {
         $this->staffInput = '';
         $this->staffOutput = null;
+        $this->staffRawResponse = null;
     }
 
     public function generateContentIdeas(): void
     {
         $this->validate([
             'contentTopic' => ['required', 'string', 'min:4'],
+            'contentLanguage' => ['required', 'string', 'in:English,Malay,Chinese,Tamil'],
         ]);
 
         if (!$this->geminiService->testConnection()) {
@@ -352,12 +358,45 @@ new class extends Component {
         }
 
         $prompt = $this->buildContentIdeasPrompt();
+        $startTime = microtime(true);
         $response = $this->geminiService->generateContent($prompt);
+        $latencyMs = (int)((microtime(true) - $startTime) * 1000);
 
         if ($response) {
             $this->parseContentIdeasResponse($response);
+            
+            // Log successful generation
+            AiActivityLogger::log(
+                activityType: 'content_ideas_generated',
+                model: 'gemini-2.5-flash',
+                prompt: $prompt,
+                output: json_encode($this->contentIdeasOutput, JSON_PRETTY_PRINT),
+                tokenCount: mb_strlen($prompt) + mb_strlen($response),
+                status: 'success',
+                latencyMs: $latencyMs,
+                meta: [
+                    'topic' => $this->contentTopic,
+                    'language' => $this->contentLanguage,
+                    'ideas_count' => count($this->contentIdeasOutput)
+                ]
+            );
         } else {
-            $this->addError('contentTopic', 'Failed to generate content ideas. Please try again.');
+            $errorMessage = 'Failed to generate content ideas';
+            $this->addError('contentTopic', $errorMessage);
+            
+            // Log failure
+            AiActivityLogger::log(
+                activityType: 'content_ideas_generated',
+                model: 'gemini-2.5-flash',
+                prompt: $prompt,
+                status: 'failed',
+                errorMessage: $errorMessage,
+                latencyMs: $latencyMs,
+                meta: [
+                    'topic' => $this->contentTopic,
+                    'language' => $this->contentLanguage
+                ]
+            );
         }
     }
 
@@ -377,6 +416,9 @@ new class extends Component {
     {
         $ideas = [];
         $lines = explode("\n", $response);
+        $lines = array_filter($lines, function($line) {
+            return !empty($line);
+        });
         $currentIdea = [];
 
         foreach ($lines as $line) {
@@ -428,17 +470,69 @@ new class extends Component {
         ]);
 
         if (!$this->geminiService->testConnection()) {
-            $this->addError('marketingProduct', 'Unable to connect to Gemini API. Please check your API key.');
+            $errorMessage = 'Unable to connect to Gemini API';
+            $this->addError('marketingProduct', $errorMessage);
+            
+            // Log connection failure
+            AiActivityLogger::log(
+                activityType: 'marketing_copy_generated',
+                status: 'failed',
+                errorMessage: $errorMessage,
+                meta: [
+                    'product' => substr($this->marketingProduct, 0, 100),
+                    'tone' => $this->marketingTone,
+                    'audience' => $this->marketingAudience,
+                    'language' => $this->marketingLanguage
+                ]
+            );
             return;
         }
 
         $prompt = $this->buildMarketingCopyPrompt();
+        $startTime = microtime(true);
         $response = $this->geminiService->generateContent($prompt);
+        $latencyMs = (int)((microtime(true) - $startTime) * 1000);
 
         if ($response) {
+            $this->marketingRawResponse = $response;
             $this->parseMarketingCopyResponse($response);
+            
+            // Log successful generation
+            AiActivityLogger::log(
+                activityType: 'marketing_copy_generated',
+                model: 'gemini-2.5-flash',
+                prompt: $prompt,
+                output: $response,
+                tokenCount: mb_strlen($prompt) + mb_strlen($response),
+                status: 'success',
+                latencyMs: $latencyMs,
+                meta: [
+                    'product' => substr($this->marketingProduct, 0, 100),
+                    'tone' => $this->marketingTone,
+                    'audience' => $this->marketingAudience,
+                    'language' => $this->marketingLanguage,
+                    'keywords' => $this->marketingKeywords
+                ]
+            );
         } else {
-            $this->addError('marketingProduct', 'Failed to generate marketing copy. Please try again.');
+            $errorMessage = 'Failed to generate marketing copy';
+            $this->addError('marketingProduct', $errorMessage);
+            
+            // Log failure
+            AiActivityLogger::log(
+                activityType: 'marketing_copy_generated',
+                model: 'gemini-2.5-flash',
+                prompt: $prompt,
+                status: 'failed',
+                errorMessage: $errorMessage,
+                latencyMs: $latencyMs,
+                meta: [
+                    'product' => substr($this->marketingProduct, 0, 100),
+                    'tone' => $this->marketingTone,
+                    'audience' => $this->marketingAudience,
+                    'language' => $this->marketingLanguage
+                ]
+            );
         }
     }
 
@@ -567,6 +661,7 @@ new class extends Component {
         $this->marketingTone = 'Professional';
         $this->marketingLanguage = 'English';
         $this->marketingOutput = null;
+        $this->marketingRawResponse = null;
     }
 
     public function generateStoryline(): void
@@ -585,6 +680,7 @@ new class extends Component {
         $response = $this->geminiService->generateContent($prompt);
 
         if ($response) {
+            $this->storyRawResponse = $response;
             $this->parseStorylineResponse($response);
         } else {
             $this->addError('productDescription', 'Failed to generate storyline. Please try again.');
@@ -671,13 +767,14 @@ new class extends Component {
 
     public function resetStoryline(): void
     {
-        $this->productPhoto = null;
+        $this->reset('productPhoto');
         $this->productDescription = '';
         $this->storyVibe = 'Random';
         $this->storyLighting = 'Random';
         $this->storyContentType = 'Random';
         $this->storyLanguage = 'English';
         $this->storyOutput = [];
+        $this->storyRawResponse = null;
     }
 }; ?>
 
@@ -761,7 +858,7 @@ new class extends Component {
                             id="staff-input"
                             wire:model.defer="staffInput"
                             rows="4"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:ring-zinc-400"
+                            class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                             placeholder="{{ __('Describe your product or campaign...') }}"
                         ></textarea>
                         @error('staffInput')
@@ -805,13 +902,13 @@ new class extends Component {
                 <div class="rounded-lg border border-dashed border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                     <header class="mb-4 flex items-center justify-between">
                         <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{{ __('Output') }}</h2>
-                        @if ($staffOutput)
+                        @if ($staffRawResponse)
                             <div class="flex space-x-2">
                                 <button 
                                     type="button" 
                                     x-data="{ copied: false }"
                                     x-on:click="
-                                        navigator.clipboard.writeText(@js($staffOutput));
+                                        navigator.clipboard.writeText(@js($staffRawResponse));
                                         copied = true;
                                         setTimeout(() => copied = false, 2000);
                                     "
@@ -829,7 +926,7 @@ new class extends Component {
                                     type="button"
                                     x-data="{ saved: false }"
                                     x-on:click="
-                                        const blob = new Blob([@js($staffOutput)], { type: 'text/plain' });
+                                        const blob = new Blob([@js($staffRawResponse)], { type: 'text/plain' });
                                         const url = URL.createObjectURL(blob);
                                         const a = document.createElement('a');
                                         a.href = url;
@@ -856,10 +953,8 @@ new class extends Component {
                     </header>
 
                     <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
-                        @if ($staffOutput)
-                            <article class="prose max-w-none text-zinc-800 dark:prose-invert dark:text-zinc-100">
-                                {!! Str::markdown($staffOutput) !!}
-                            </article>
+                        @if ($staffRawResponse)
+                            <pre class="whitespace-pre-wrap break-words font-mono text-sm">{{ $staffRawResponse }}</pre>
                         @else
                             <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
                                 <flux:icon.sparkles variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
@@ -980,7 +1075,7 @@ new class extends Component {
                                     class="inline-flex items-center px-3 py-1.5 border border-zinc-300 dark:border-zinc-600 rounded-md text-sm font-medium text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-zinc-900"
                                 >
                                     <svg x-show="!saved" class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 012 2h14a2 2 0 012-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
                                     </svg>
                                     <svg x-show="saved" class="w-4 h-4 mr-1.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -991,12 +1086,12 @@ new class extends Component {
                         @endif
                     </header>
 
-                    @if (count($contentIdeasOutput) > 0)
-                        <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
+                    <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
+                        @if (count($contentIdeasOutput) > 0)
                             <div class="space-y-4">
                                 @foreach ($contentIdeasOutput as $index => $idea)
                                     <div class="group relative rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-                                        <h3 class="text-base font-medium text-zinc-900 dark:text-zinc-50">{{ $idea['title'] ?? 'Untitled Idea' }}</h3>
+                                        <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">{{ $idea['title'] ?? 'Untitled Idea' }}</h3>
                                         @if(isset($idea['angle']))
                                             <p class="mt-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ $idea['angle'] }}</p>
                                         @endif
@@ -1006,18 +1101,13 @@ new class extends Component {
                                     </div>
                                 @endforeach
                             </div>
-                        </div>
-                    @else
-                        <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
+                        @else
                             <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                                <svg class="size-10 text-zinc-300 dark:text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-                                </svg>
-
+                                <flux:icon.speaker-wave variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
                                 <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Generate content ideas to see the output here.') }}</p>
                             </div>
-                        </div>
-                    @endif
+                        @endif
+                    </div>
                 </div>
             </div>
         @elseif ($activeTab === 'marketing-copy')
@@ -1119,13 +1209,13 @@ new class extends Component {
                 <div class="rounded-lg border border-dashed border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                     <header class="mb-4 flex items-center justify-between">
                         <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{{ __('Output') }}</h2>
-                        @if ($marketingOutput)
+                        @if ($marketingRawResponse)
                             <div class="flex space-x-2">
                                 <button 
                                     type="button" 
                                     x-data="{ copied: false }"
                                     x-on:click="
-                                        navigator.clipboard.writeText(@js($marketingOutput['body']));
+                                        navigator.clipboard.writeText(@js($marketingRawResponse));
                                         copied = true;
                                         setTimeout(() => copied = false, 2000);
                                     "
@@ -1143,7 +1233,7 @@ new class extends Component {
                                     type="button"
                                     x-data="{ saved: false }"
                                     x-on:click="
-                                        const blob = new Blob([@js($marketingOutput['body'])], { type: 'text/plain' });
+                                        const blob = new Blob([@js($marketingRawResponse)], { type: 'text/plain' });
                                         const url = URL.createObjectURL(blob);
                                         const a = document.createElement('a');
                                         a.href = url;
@@ -1158,7 +1248,7 @@ new class extends Component {
                                     class="inline-flex items-center px-3 py-1.5 border border-zinc-300 dark:border-zinc-600 rounded-md text-sm font-medium text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-zinc-900"
                                 >
                                     <svg x-show="!saved" class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 012 2h14a2 2 0 012-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
                                     </svg>
                                     <svg x-show="saved" class="w-4 h-4 mr-1.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -1170,41 +1260,13 @@ new class extends Component {
                     </header>
 
                     <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
-                        @if ($marketingOutput)
-                            <article class="prose max-w-none text-zinc-800 dark:prose-invert dark:text-zinc-100">
-                                @if(!empty($marketingOutput['headline']))
-                                    <h3>{{ $marketingOutput['headline'] }}</h3>
-                                @endif
-                                
-                                @if(!empty($marketingOutput['body']))
-                                    <div class="whitespace-pre-line">{{ $marketingOutput['body'] }}</div>
-                                @endif
-                                
-                                @if(!empty($marketingOutput['cta']))
-                                    <div class="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                                        <p class="font-medium text-zinc-900 dark:text-zinc-100">{{ __('Call to Action') }}</p>
-                                        <p class="mt-1">{{ $marketingOutput['cta'] }}</p>
-                                    </div>
-                                @endif
-                                
-                                @if(!empty($marketingOutput['hashtags']))
-                                    <div class="mt-6">
-                                        <p class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{{ __('Tags') }}</p>
-                                        <div class="mt-2 flex flex-wrap gap-2">
-                                            @foreach ($marketingOutput['hashtags'] as $tag)
-                                                <span class="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                                                    #{{ ltrim($tag, '#') }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                            </article>
+                        @if ($marketingRawResponse)
+                            <pre class="whitespace-pre-wrap break-words font-mono text-sm">{{ $marketingRawResponse }}</pre>
                         @else
-                        <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
-                            <flux:icon.speaker-wave variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated marketing copy will appear here.') }}</p>
-                        </div>
+                            <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
+                                <flux:icon.speaker-wave variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
+                                <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Your generated marketing copy will appear here.') }}</p>
+                            </div>
                         @endif
                     </div>
                 </div>
