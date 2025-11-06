@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\GeminiService;
+use App\Services\AiActivityLogger;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Livewire\Volt\Component;
@@ -108,16 +109,54 @@ new class extends Component {
             "6. Use appropriate cultural context and idioms for {$this->contentLanguage} when relevant."
         ]);
         
-        $response = $this->geminiService->generateContent($prompt, [
-            'language' => $this->contentLanguage,
-            'temperature' => 0.7,
-            'top_p' => 0.9,
-        ]);
+        try {
+            $response = $this->geminiService->generateContent($prompt, [
+                'language' => $this->contentLanguage,
+                'temperature' => 0.7,
+                'top_p' => 0.9,
+            ]);
 
-        if ($response) {
-            $this->staffOutput = $response;
-        } else {
-            session()->flash('error', 'Failed to generate content. Please try again.');
+            if ($response) {
+                $this->staffOutput = $response;
+                
+                // Log successful activity
+                AiActivityLogger::log(
+                    activityType: 'content_generation',
+                    model: 'gemini-pro',
+                    prompt: $this->staffInput,
+                    output: $this->staffOutput,
+                    tokenCount: (int)(strlen($response) / 4), // Rough estimate of token count
+                    status: 'success',
+                    meta: [
+                        'agent' => $agent['name'] ?? 'Unknown',
+                        'role' => $agent['role'] ?? 'Unknown',
+                        'language' => $this->contentLanguage,
+                        'tool' => 'Staff Magika',
+                        'tab' => $this->activeTab
+                    ]
+                );
+            } else {
+                throw new \Exception('Empty response from AI service');
+            }
+        } catch (\Exception $e) {
+            // Log error activity
+            AiActivityLogger::log(
+                activityType: 'content_generation',
+                model: 'gemini-pro',
+                prompt: $this->staffInput,
+                status: 'error',
+                errorMessage: $e->getMessage(),
+                meta: [
+                    'agent' => $agent['name'] ?? 'Unknown',
+                    'role' => $agent['role'] ?? 'Unknown',
+                    'language' => $this->contentLanguage,
+                    'tool' => 'Staff Magika',
+                    'tab' => $this->activeTab,
+                    'error' => $e->getTraceAsString()
+                ]
+            );
+            
+            session()->flash('error', 'Failed to generate content: ' . $e->getMessage());
         }
     }
 
