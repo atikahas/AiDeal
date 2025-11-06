@@ -122,7 +122,7 @@ new class extends Component {
                 // Log successful activity
                 AiActivityLogger::log(
                     activityType: 'content_generation',
-                    model: 'gemini-pro',
+                    model: 'gemini-2.5-flash',
                     prompt: $this->staffInput,
                     output: $this->staffOutput,
                     tokenCount: (int)(strlen($response) / 4), // Rough estimate of token count
@@ -142,7 +142,7 @@ new class extends Component {
             // Log error activity
             AiActivityLogger::log(
                 activityType: 'content_generation',
-                model: 'gemini-pro',
+                model: 'gemini-2.5-flash',
                 prompt: $this->staffInput,
                 status: 'error',
                 errorMessage: $e->getMessage(),
@@ -363,7 +363,7 @@ new class extends Component {
 
     protected function buildContentIdeasPrompt(): string
     {
-        return "Generate 5 engaging content ideas about: {$this->contentTopic}\n\n" .
+        return "Generate 4 engaging content ideas about: {$this->contentTopic}\n\n" .
                "For each idea, provide:\n" .
                "1. A catchy title (max 10 words)\n" .
                "2. A unique angle or perspective (1-2 sentences)\n" .
@@ -937,7 +937,11 @@ new class extends Component {
                                     type="button" 
                                     x-data="{ copied: false }"
                                     x-on:click="
-                                        const outputText = @js(collect($contentIdeasOutput)->map(fn($idea) => "# " . $idea['title'] . "\n" . $idea['description'])->join('\n\n'));
+                                        const outputText = @js(collect($contentIdeasOutput)->map(function($idea) {
+                                            return "# " . ($idea['title'] ?? 'Untitled Idea') . "\n" . 
+                                                   (isset($idea['angle']) ? $idea['angle'] . "\n" : '') . 
+                                                   (isset($idea['hook']) ? '\"' . $idea['hook'] . '\"' : '');
+                                        })->filter()->join('\n\n'));
                                         navigator.clipboard.writeText(outputText);
                                         copied = true;
                                         setTimeout(() => copied = false, 2000);
@@ -956,7 +960,11 @@ new class extends Component {
                                     type="button"
                                     x-data="{ saved: false }"
                                     x-on:click="
-                                        const content = @js(collect($contentIdeasOutput)->map(fn($idea) => "# " . $idea['title'] . "\n" . $idea['description'])->join('\n\n'));
+                                        const content = @js(collect($contentIdeasOutput)->map(function($idea) {
+                                            return "# " . ($idea['title'] ?? 'Untitled Idea') . "\n" . 
+                                                   (isset($idea['angle']) ? $idea['angle'] . "\n" : '') . 
+                                                   (isset($idea['hook']) ? '\"' . $idea['hook'] . '\"' : '');
+                                        })->filter()->join('\n\n'));
                                         const blob = new Blob([content], { type: 'text/plain' });
                                         const url = URL.createObjectURL(blob);
                                         const a = document.createElement('a');
@@ -988,56 +996,13 @@ new class extends Component {
                             <div class="space-y-4">
                                 @foreach ($contentIdeasOutput as $index => $idea)
                                     <div class="group relative rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-                                        <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button 
-                                                type="button"
-                                                x-data="{ copied: false }"
-                                                x-on:click="
-                                                    const text = @js('# ' . $idea['title'] . '\n' . $idea['description']);
-                                                    navigator.clipboard.writeText(text);
-                                                    copied = true;
-                                                    setTimeout(() => copied = false, 2000);
-                                                "
-                                                class="p-1 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                                                title="Copy"
-                                            >
-                                                <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                                </svg>
-                                                <svg x-show="copied" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                </svg>
-                                            </button>
-                                            <button 
-                                                type="button"
-                                                x-data="{ saved: false }"
-                                                x-on:click="
-                                                    const content = @js('# ' . $idea['title'] . '\n\n' . $idea['description']);
-                                                    const blob = new Blob([content], { type: 'text/plain' });
-                                                    const url = URL.createObjectURL(blob);
-                                                    const a = document.createElement('a');
-                                                    a.href = url;
-                                                    a.download = 'content-idea-' + @js($index + 1) + '-' + new Date().toISOString().slice(0, 10) + '.txt';
-                                                    document.body.appendChild(a);
-                                                    a.click();
-                                                    document.body.removeChild(a);
-                                                    URL.revokeObjectURL(url);
-                                                    saved = true;
-                                                    setTimeout(() => saved = false, 2000);
-                                                "
-                                                class="p-1 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                                                title="Save as TXT"
-                                            >
-                                                <svg x-show="!saved" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-                                                </svg>
-                                                <svg x-show="saved" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <h3 class="text-base font-medium text-zinc-900 dark:text-zinc-50">{{ $idea['title'] }}</h3>
-                                        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300 whitespace-pre-line">{{ $idea['description'] }}</p>
+                                        <h3 class="text-base font-medium text-zinc-900 dark:text-zinc-50">{{ $idea['title'] ?? 'Untitled Idea' }}</h3>
+                                        @if(isset($idea['angle']))
+                                            <p class="mt-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ $idea['angle'] }}</p>
+                                        @endif
+                                        @if(isset($idea['hook']))
+                                            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400 italic">"{{ $idea['hook'] }}"</p>
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>
@@ -1049,7 +1014,7 @@ new class extends Component {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
                                 </svg>
 
-                                <p>{{ __('Generate content ideas to see the output here.') }}</p>
+                                <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('Generate content ideas to see the output here.') }}</p>
                             </div>
                         </div>
                     @endif
