@@ -26,7 +26,7 @@ return new class extends Migration {
         DB::table('api_keys')->insert([
             'provider' => 'gemini',
             'label' => 'Master Gemini Key',
-            'secret' => encrypt('AIzaSyDyHZnea079VrnzXm5jT48uHymmuvhTBCo'),
+            'secret' => encrypt('your api key'),
             'is_active' => true,
             'connection_status' => 'connected',
             'last_tested_at' => now(),
