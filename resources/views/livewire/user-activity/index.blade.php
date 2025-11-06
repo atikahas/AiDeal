@@ -1,5 +1,5 @@
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex flex-col gap-1">
+    <div class="flex flex-col gap-2">
         <h2 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">AI Activity Logs</h2>
         <p class="text-sm text-zinc-500 dark:text-zinc-400">View and manage your AI activity history</p>
     </div>
