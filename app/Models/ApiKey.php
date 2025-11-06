@@ -15,11 +15,14 @@ class ApiKey extends Model
         'label',
         'secret',
         'is_active',
+        'connection_status',
+        'last_tested_at',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'secret' => 'encrypted',
+        'last_tested_at' => 'datetime',
     ];
 
     public function scopeForUser($query, ?int $userId)

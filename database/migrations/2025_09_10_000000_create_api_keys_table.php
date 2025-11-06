@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->string('label');
             $table->text('secret');
             $table->boolean('is_active')->default(false);
+            $table->string('connection_status')->nullable();
+            $table->timestamp('last_tested_at')->nullable();
             $table->timestamps();
         });
 
@@ -26,6 +28,8 @@ return new class extends Migration {
             'label' => 'Master Gemini Key',
             'secret' => encrypt('AIzaSyDyHZnea079VrnzXm5jT48uHymmuvhTBCo'),
             'is_active' => true,
+            'connection_status' => 'connected',
+            'last_tested_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

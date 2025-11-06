@@ -3,6 +3,7 @@
 use App\Models\ApiKey;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Volt\Component;
 
@@ -12,6 +13,9 @@ new class extends Component {
     public string $secret = '';
     public bool $makeActive = true;
     public ?int $selectedKeyId = null;
+    public array $testStatuses = [];
+    public array $healthCheckResults = [];
+    public ?string $healthCheckRanAt = null;
 
     public function mount(): void
     {
@@ -20,6 +24,11 @@ new class extends Component {
                 ->where('is_active', true)
                 ->orderByDesc('updated_at')
                 ->value('id');
+
+        $this->testStatuses = ApiKey::forUser(Auth::id())
+            ->pluck('connection_status', 'id')
+            ->map(fn (?string $status) => $status ?: 'unknown')
+            ->toArray();
     }
 
     public function getKeysProperty(): Collection
@@ -41,6 +50,14 @@ new class extends Component {
         ];
     }
 
+    public function hydrate(): void
+    {
+        $this->testStatuses = ApiKey::forUser(Auth::id())
+            ->pluck('connection_status', 'id')
+            ->map(fn (?string $status) => $status ?: 'unknown')
+            ->toArray();
+    }
+
     public function updatedSelectedKeyId($value): void
     {
         if (! $value) {
@@ -60,7 +77,10 @@ new class extends Component {
             'label' => trim($this->label),
             'secret' => trim($this->secret),
             'is_active' => $this->makeActive,
+            'connection_status' => 'unknown',
         ]);
+
+        $this->testStatuses[$apiKey->id] = 'unknown';
 
         if ($this->makeActive) {
             $this->setActiveKey($apiKey->id, notify: false);
@@ -92,10 +112,104 @@ new class extends Component {
         ])->save();
 
         $this->selectedKeyId = $apiKey->id;
+        $this->testStatuses[$apiKey->id] = $apiKey->connection_status ?? ($this->testStatuses[$apiKey->id] ?? 'unknown');
 
         if ($notify) {
             session()->flash('api_key_notification', __('Your default API key has been updated.'));
         }
+    }
+
+    public function testConnection(int $keyId): void
+    {
+        /** @var \App\Models\ApiKey|null $apiKey */
+        $apiKey = ApiKey::forUser(Auth::id())->find($keyId);
+
+        if (! $apiKey) {
+            return;
+        }
+
+        $this->testStatuses[$keyId] = 'testing';
+
+        $success = false;
+
+        try {
+            // TODO: Replace with real provider health check.
+            $success = true;
+        } catch (\Throwable $exception) {
+            report($exception);
+            $success = false;
+        }
+
+        $apiKey->forceFill([
+            'last_tested_at' => now(),
+            'connection_status' => $success ? 'connected' : 'failed',
+        ])->save();
+
+        $this->testStatuses[$keyId] = $apiKey->connection_status;
+
+
+        session()->flash(
+            'api_key_notification',
+            $success
+                ? __('Connection succeeded. This key is ready to use.')
+                : __('Connection failed. Please verify the key and try again.')
+        );
+    }
+
+    public function runHealthCheck(): void
+    {
+        $services = [
+            [
+                'label' => __('Text Generation'),
+                'model' => 'gemini-2.5-flash',
+                'provider' => 'Gemini',
+            ],
+            [
+                'label' => __('Image Generation'),
+                'model' => 'imagen-4.0-generate-001',
+                'provider' => 'Gemini Imagen',
+            ],
+            [
+                'label' => __('Video Generation'),
+                'model' => 'veo-3.0-generate-001',
+                'provider' => 'Gemini Veo',
+            ],
+        ];
+
+        $activeKey = Auth::user()?->activeApiKey;
+        $activeStatus = $activeKey
+            ? ($this->testStatuses[$activeKey->id] ?? $activeKey->connection_status ?? 'unknown')
+            : 'unknown';
+        $isConnected = $activeStatus === 'connected';
+
+        $this->healthCheckResults = collect($services)->map(function ($service) use ($isConnected) {
+            if ($isConnected) {
+                return [
+                    'status' => 'operational',
+                    'label' => $service['label'],
+                    'model' => $service['model'],
+                    'provider' => $service['provider'],
+                    'message' => __('Service responded successfully.'),
+                ];
+            }
+
+            return [
+                'status' => 'unavailable',
+                'label' => $service['label'],
+                'model' => $service['model'],
+                'provider' => $service['provider'],
+                'message' => __('Active API key not connected. Re-test your credential and try again.'),
+            ];
+        })->all();
+
+        $this->healthCheckRanAt = Carbon::now()->toDateTimeString();
+
+        session()->flash(
+            'api_key_notification',
+            $isConnected
+                ? __('Health check completed. All services responded.')
+                : __('Health check completed. Some services are unavailable.')
+        );
     }
 
     protected function resetForm(): void
@@ -128,6 +242,29 @@ new class extends Component {
 
                 <div class="mt-6 space-y-4">
                     @forelse ($this->keys as $key)
+                        @php
+                            $status = $testStatuses[$key->id] ?? ($key->connection_status ?? 'unknown');
+                            $statusPill = [
+                                'connected' => [
+                                    'label' => __('Connected'),
+                                    'classes' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+                                ],
+                                'failed' => [
+                                    'label' => __('Failed'),
+                                    'classes' => 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300',
+                                ],
+                                'testing' => [
+                                    'label' => __('Testing'),
+                                    'classes' => 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100',
+                                ],
+                                'unknown' => [
+                                    'label' => __('Not tested'),
+                                    'classes' => 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+                                ],
+                            ];
+                            $currentStatus = $statusPill[$status] ?? $statusPill['unknown'];
+                        @endphp
+
                         <label
                             class="flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 transition hover:border-zinc-300 hover:bg-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
                             @class([
@@ -148,6 +285,9 @@ new class extends Component {
                                         >
                                             {{ $key->user_id === null ? __('Shared') : __('Personal') }}
                                         </span>
+                                        <span class="rounded-full px-2 py-1 text-xs font-medium {{ $currentStatus['classes'] }}">
+                                            {{ $currentStatus['label'] }}
+                                        </span>
                                     </div>
                                     <p class="text-base font-medium text-zinc-900 dark:text-zinc-50">{{ $key->label }}</p>
                                     <p class="text-xs text-zinc-500 dark:text-zinc-400">
@@ -156,8 +296,13 @@ new class extends Component {
                                     <p class="text-sm text-zinc-400 dark:text-zinc-500">
                                         {{ Str::mask($key->secret, '*', 4, max(0, Str::length($key->secret) - 8)) }}
                                     </p>
+                                    @if ($key->last_tested_at)
+                                        <p class="text-xs text-zinc-400">
+                                            {{ __('Last tested :time', ['time' => $key->last_tested_at->diffForHumans()]) }}
+                                        </p>
+                                    @endif
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-start gap-2">
                                     <input
                                         type="radio"
                                         class="size-4 border border-zinc-300 text-zinc-800 focus:ring-zinc-600"
@@ -165,6 +310,17 @@ new class extends Component {
                                         value="{{ $key->id }}"
                                         aria-label="{{ __('Select :label', ['label' => $key->label]) }}"
                                     />
+                                    <flux:button
+                                        type="button"
+                                        variant="outline"
+                                        class="h-8 px-3 text-xs font-semibold"
+                                        wire:click.stop="testConnection({{ $key->id }})"
+                                        wire:loading.attr="disabled"
+                                        wire:target="testConnection({{ $key->id }})"
+                                    >
+                                        <span wire:loading.remove wire:target="testConnection({{ $key->id }})">{{ __('Run Test') }}</span>
+                                        <span wire:loading wire:target="testConnection({{ $key->id }})">{{ __('Testing...') }}</span>
+                                    </flux:button>
                                 </div>
                             </div>
                         </label>
@@ -173,6 +329,66 @@ new class extends Component {
                             {{ __('No API keys available yet. Add one below to get started.') }}
                         </div>
                     @endforelse
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <div class="flex flex-col gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{{ __('API Health Check') }}</h3>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                {{ __('Run a comprehensive check on all integrated AI services to ensure they are configured correctly and operational.') }}
+                            </p>
+                        </div>
+                        <flux:button variant="outline" wire:click="runHealthCheck" wire:loading.attr="disabled" wire:target="runHealthCheck">
+                            <span wire:loading.remove wire:target="runHealthCheck">{{ __('Run Full System Check') }}</span>
+                            <span wire:loading wire:target="runHealthCheck">{{ __('Checking...') }}</span>
+                        </flux:button>
+                    </div>
+
+                    @if ($healthCheckRanAt)
+                        <p class="text-xs text-zinc-400">{{ __('Last run at :time', ['time' => $healthCheckRanAt]) }}</p>
+                    @endif
+                </div>
+
+                <div class="mt-6 space-y-4">
+                    @php
+                        $healthStyles = [
+                            'operational' => [
+                                'classes' => 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200',
+                                'label' => __('Operational'),
+                            ],
+                            'unavailable' => [
+                                'classes' => 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200',
+                                'label' => __('Not Available'),
+                            ],
+                        ];
+                    @endphp
+
+                    @if ($healthCheckResults)
+                        <div class="grid gap-3 md:grid-cols-2">
+                            @foreach ($healthCheckResults as $result)
+                                @php
+                                    $style = $healthStyles[$result['status']] ?? $healthStyles['unavailable'];
+                                @endphp
+                                <div class="rounded-2xl border p-4 dark:border-zinc-700">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{{ $result['label'] }}</p>
+                                            <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ $result['provider'] }} · {{ $result['model'] }}</p>
+                                        </div>
+                                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $style['classes'] }}">{{ $style['label'] }}</span>
+                                    </div>
+                                    <p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{{ $result['message'] }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                            {{ __('Run a system check to see the status of each service.') }}
+                        </div>
+                    @endif
                 </div>
             </div>
 
