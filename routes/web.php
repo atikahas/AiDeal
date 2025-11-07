@@ -31,7 +31,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('ai-content-idea-suite', 'ai-content-idea-suite')->name('ai.content-idea-suite');
     
     // AI Image Suite
-    Volt::route('ai-image-suite', 'ai-image-suite')->name('ai.image-suite');
+    Route::get('ai-image-idea-suite', \App\Livewire\AiImageIdeaSuite\Index::class)->name('ai.image-idea-suite');
     
     // AI Activity Logs
     Route::get('activity', \App\Livewire\UserActivity\Index::class)->name('activity.index');
