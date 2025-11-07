@@ -8,11 +8,14 @@
         </div>
 
         <div class="space-y-4">
-            {{-- <div class="space-y-2">
-                for upload image input file
-            </div> --}}
             <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="staff-input">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="upload-image">
+                    {{ __('Upload Image') }}
+                </label>
+                <input type="file" id="upload-image" wire:model.live="image" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+            </div>
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
                     {{ __('Prompt') }}
                 </label>
                 <textarea id="prompt" wire:model.live="prompt" rows="4" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" placeholder="{{ __('Describe the image you want to generate...') }}"></textarea>
