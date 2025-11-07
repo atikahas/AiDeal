@@ -9,11 +9,13 @@ new class extends Component {
     use WithFileUploads;
 
     public string $activeTab = 'image-generation';
-    public string $style = 'Photography';
-    public string $lighting = 'Natural';
-    public string $angle = 'Front';
-    public string $composition = 'Rule of Thirds';
-    public string $lensType = 'Prime';
+    public bool $showAdvancedSettings = false;
+    public ?string $style = null;
+    public ?string $lighting = null;
+    public ?string $angle = null;
+    public ?string $composition = null;
+    public ?string $lensType = null;
+    public ?string $filmSimulation = null;
     public $imageGenerationPhoto;
     public string $prompt = '';
     public ?string $generatedImage = null;
@@ -79,6 +81,19 @@ new class extends Component {
         'Portrait'
     ];
 
+    public array $filmSimulations = [
+        'Kodak Portra 400',
+        'Fujifilm Provia',
+        'Kodak Ektar 100',
+        'Fujifilm Velvia 50',
+        'Ilford HP5+ 400',
+        'Kodak Tri-X 400',
+        'Fujifilm Superia 400',
+        'Kodak Gold 200',
+        'Cinestill 800T',
+        'Fujifilm Acros 100'
+    ];
+
     public function setActiveTab(string $tab): void
     {
         $this->activeTab = $tab;
@@ -95,21 +110,6 @@ new class extends Component {
     {
         session()->flash('info', 'Image generation functionality will be implemented soon');
     }
-
-    public string $filmSimulation = 'Kodak Portra 400';
-    
-    public array $filmSimulations = [
-        'Kodak Portra 400',
-        'Fujifilm Provia',
-        'Kodak Ektar 100',
-        'Fujifilm Velvia 50',
-        'Ilford HP5+ 400',
-        'Kodak Tri-X 400',
-        'Fujifilm Superia 400',
-        'Kodak Gold 200',
-        'Cinestill 800T',
-        'Fujifilm Acros 100'
-    ];
 
     public function resetForm()
     {
@@ -215,77 +215,112 @@ new class extends Component {
                                 placeholder="{{ __('Describe the image you want to generate...') }}"
                             ></textarea>
                         </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="style">{{ __('Style') }}</label>
-                            <select
-                                id="style"
-                                wire:model="style"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        <!-- Advanced Settings Toggle -->
+                        <div class="">
+                            <button
+                                type="button"
+                                wire:click="$toggle('showAdvancedSettings')"
+                                class="inline-flex items-center text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
                             >
-                                @foreach($styles as $styleOption)
-                                    <option value="{{ $styleOption }}">{{ $styleOption }}</option>
-                                @endforeach
-                            </select>
+                                {{ __('Advanced Settings') }}
+                                <svg 
+                                    class="ml-1.5 h-4 w-4 transition-transform duration-200 {{ $showAdvancedSettings ? 'rotate-180' : '' }}" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
                         </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="lighting">{{ __('Lighting') }}</label>
-                            <select
-                                id="lighting"
-                                wire:model="lighting"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                            >
-                                @foreach($lightingOptions as $lightingOption)
-                                    <option value="{{ $lightingOption }}">{{ $lightingOption }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="angle">{{ __('Angle') }}</label>
-                            <select
-                                id="angle"
-                                wire:model="angle"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                            >
-                                @foreach($angleOptions as $angleOption)
-                                    <option value="{{ $angleOption }}">{{ $angleOption }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="composition">{{ __('Composition') }}</label>
-                            <select
-                                id="composition"
-                                wire:model="composition"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                            >
-                                @foreach($compositions as $compositionOption)
-                                    <option value="{{ $compositionOption }}">{{ $compositionOption }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="lensType">{{ __('Lens Type') }}</label>
-                            <select
-                                id="lensType"
-                                wire:model="lensType"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                            >
-                                @foreach($lensTypes as $lensTypeOption)
-                                    <option value="{{ $lensTypeOption }}">{{ $lensTypeOption }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="filmSimulation">{{ __('Film Simulation') }}</label>
-                            <select
-                                id="filmSimulation"
-                                wire:model="filmSimulation"
-                                class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                            >
-                                @foreach($filmSimulations as $filmSimulationOption)
-                                    <option value="{{ $filmSimulationOption }}">{{ $filmSimulationOption }}</option>
-                                @endforeach
-                            </select>
+
+                        <!-- Advanced Settings Content -->
+                        <div x-show="$wire.showAdvancedSettings" x-collapse class="space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="style">{{ __('Style') }}</label>
+                                    <select
+                                        id="style"
+                                        wire:model="style"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        @foreach($styles as $styleOption)
+                                            <option value="{{ $styleOption }}">{{ $styleOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="lighting">{{ __('Lighting') }}</label>
+                                    <select
+                                        id="lighting"
+                                        wire:model="lighting"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        @foreach($lightingOptions as $lightingOption)
+                                            <option value="{{ $lightingOption }}">{{ $lightingOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="angle">{{ __('Angle') }}</label>
+                                    <select
+                                        id="angle"
+                                        wire:model="angle"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        @foreach($angleOptions as $angleOption)
+                                            <option value="{{ $angleOption }}">{{ $angleOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="composition">{{ __('Composition') }}</label>
+                                    <select
+                                        id="composition"
+                                        wire:model="composition"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        @foreach($compositions as $compositionOption)
+                                            <option value="{{ $compositionOption }}">{{ $compositionOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="lensType">{{ __('Lens Type') }}</label>
+                                    <select
+                                        id="lensType"
+                                        wire:model="lensType"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        @foreach($lensTypes as $lensTypeOption)
+                                            <option value="{{ $lensTypeOption }}">{{ $lensTypeOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="filmSimulation">{{ __('Film Simulation') }}</label>
+                                    <select
+                                        id="filmSimulation"
+                                        wire:model="filmSimulation"
+                                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        @foreach($filmSimulations as $filmSimulationOption)
+                                            <option value="{{ $filmSimulationOption }}">{{ $filmSimulationOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
