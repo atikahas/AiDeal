@@ -7,18 +7,52 @@
             </p>
         </div>
 
-        <div class="space-y-4">
+        <form wire:submit.prevent="generateImage" class="space-y-4">
+            <div class="flex flex-wrap gap-2 rounded-xl border border-dashed border-zinc-200 p-2 dark:border-zinc-700">
+                @foreach([
+                    'text-to-image' => __('Text → Image'),
+                    'image-only' => __('Image → Image'),
+                    'text-image' => __('Text + Image'),
+                ] as $mode => $label)
+                    <button
+                        type="button"
+                        wire:click="setGenerationMode('{{ $mode }}')"
+                        wire:loading.attr="disabled"
+                        wire:target="generateImage"
+                        @class([
+                            'flex-1 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500',
+                            'bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900' => $generationMode === $mode,
+                            'bg-white text-zinc-600 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800' => $generationMode !== $mode,
+                        ])
+                    >
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
+
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="upload-image">
-                    {{ __('Upload Image') }}
+                    {{ __('Upload Image (optional)') }}
                 </label>
-                <input type="file" id="upload-image" wire:model.live="image" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+                <input
+                    type="file"
+                    id="upload-image"
+                    accept="image/png,image/jpeg,image/webp"
+                    wire:model.live="image"
+                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                >
+                @error('image')
+                    <p class="text-xs text-red-500">{{ $message }}</p>
+                @enderror
             </div>
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
                     {{ __('Prompt') }}
                 </label>
                 <textarea id="prompt" wire:model.live="prompt" rows="4" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" placeholder="{{ __('Describe the image you want to generate...') }}"></textarea>
+                @error('prompt')
+                    <p class="text-xs text-red-500">{{ $message }}</p>
+                @enderror
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2">
@@ -118,13 +152,22 @@
 
             <flux:separator />
 
-            <div class="flex items-center gap-3">
-                <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-                    {{ __('Generate Image') }}
+            <div class="flex flex-wrap items-center gap-3">
+                <button
+                    type="submit"
+                    class="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    wire:loading.attr="disabled"
+                    wire:target="generateImage,image"
+                >
+                    <span>{{ __('Generate Image') }}</span>
+                    <svg wire:loading wire:target="generateImage" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"></path>
+                    </svg>
                 </button>
-                <button type="button" class="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100" wire:click="resetForm">{{ __('Reset') }}</button>
+                <button type="button" class="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100" wire:click="resetForm" wire:loading.attr="disabled" wire:target="generateImage,image">{{ __('Reset') }}</button>
             </div>
-        </div>
+        </form>
     </div>
 
     <div class="rounded-lg border border-dashed border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
@@ -144,7 +187,7 @@
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     @foreach($generatedImages as $index => $image)
                         <div class="relative cursor-pointer overflow-hidden rounded-lg border-2 {{ $selectedImageIndex === $index ? 'border-blue-500 ring-2 ring-blue-500' : 'border-transparent' }}" wire:click="$set('selectedImageIndex', {{ $index }})">
-                            <img src="{{ $image }}" alt="Generated image {{ $index + 1 }}" class="h-full w-full object-cover">
+                            <img src="{{ $image['url'] ?? $image }}" alt="Generated image {{ $index + 1 }}" class="h-full w-full object-cover">
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-white">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium">Variant #{{ $index + 1 }}</span>
@@ -161,7 +204,7 @@
                 
                 @if($selectedImageIndex !== null)
                     <div class="mt-4 flex justify-end space-x-2">
-                        <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" wire:click="downloadImage">
+                        <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70" wire:click="downloadImage" wire:loading.attr="disabled" wire:target="downloadImage">
                             <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>

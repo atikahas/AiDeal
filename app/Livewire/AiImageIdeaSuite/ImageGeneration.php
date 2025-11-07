@@ -3,12 +3,15 @@
 namespace App\Livewire\AiImageIdeaSuite;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use App\Models\ImageJob;
 use App\Services\Ai\ImagenClient;
-use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ImageGeneration extends Component
 {
+    use WithFileUploads;
+
     public $prompt = '';
     public $negativePrompt = '';
     public $imageCount = 1;
@@ -16,7 +19,6 @@ class ImageGeneration extends Component
     public $style = 'photographic';
     public $isProcessing = false;
     public $recentJobs = [];
-    public $activeTab = 'text-to-image';
     public $showAdvancedSettings = false;
     public $styles = [];
     public $lightingOptions = [];
@@ -29,15 +31,11 @@ class ImageGeneration extends Component
     public $angle = '';
     public $lensType = '';
     public $filmSimulation = '';
+    public $image;
+    public $generatedImages = [];
+    public $selectedImageIndex = null;
+    public $generationMode = 'text-to-image';
 
-    protected $rules = [
-        'prompt' => 'required|string|max:1000',
-        'negativePrompt' => 'nullable|string|max:1000',
-        'imageCount' => 'required|integer|min:1|max:4',
-        'aspectRatio' => 'required|in:1:1,4:3,16:9,9:16',
-        'style' => 'required|string',
-    ];
-    
     public function mount()
     {
         $this->loadRecentJobs();
@@ -59,6 +57,34 @@ class ImageGeneration extends Component
         $this->filmSimulations = ['Kodak Portra 400','Fujifilm Provia','Kodak Ektar 100','Fujifilm Velvia 50','Ilford HP5+ 400','Kodak Tri-X 400','Fujifilm Superia 400','Kodak Gold 200','Cinestill 800T','Fujifilm Acros 100'];
     }
 
+    protected function rules(): array
+    {
+        $rules = [
+            'prompt' => 'nullable|string|max:1000',
+            'negativePrompt' => 'nullable|string|max:1000',
+            'imageCount' => 'required|integer|min:1|max:5',
+            'aspectRatio' => 'required|in:1:1,4:3,16:9,9:16,3:2',
+            'style' => 'nullable|string|max:255',
+            'composition' => 'nullable|string|max:255',
+            'lighting' => 'nullable|string|max:255',
+            'angle' => 'nullable|string|max:255',
+            'lensType' => 'nullable|string|max:255',
+            'filmSimulation' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:10240',
+            'generationMode' => 'required|string|in:text-to-image,image-only,text-image',
+        ];
+
+        if (in_array($this->generationMode, ['text-to-image', 'text-image'], true)) {
+            $rules['prompt'] = 'required|string|max:1000';
+        }
+
+        if ($this->generationMode !== 'text-to-image') {
+            $rules['image'] = 'required|image|max:10240';
+        }
+
+        return $rules;
+    }
+
     public function loadRecentJobs()
     {
         $this->recentJobs = ImageJob::where('user_id', auth()->id())
@@ -72,45 +98,128 @@ class ImageGeneration extends Component
     {
         $this->validate();
         $this->isProcessing = true;
+        $this->resetErrorBag();
+        $this->selectedImageIndex = null;
+        $this->generatedImages = [];
+
+        $payload = $this->buildPayload();
+        $client = app(ImagenClient::class);
 
         try {
-            $job = ImageJob::create([
+            $images = match ($this->generationMode) {
+                'image-only' => $client->imageVariations($payload, $this->image),
+                'text-image' => $client->editImage($payload, $this->image),
+                default => $client->textToImage($payload),
+            };
+
+            $this->generatedImages = $images;
+            $this->selectedImageIndex = empty($images) ? null : 0;
+
+            ImageJob::create([
                 'user_id' => auth()->id(),
                 'tool' => 'image-generation',
-                'input_json' => [
-                    'prompt' => $this->prompt,
-                    'negative_prompt' => $this->negativePrompt,
-                    'image_count' => $this->imageCount,
-                    'aspect_ratio' => $this->aspectRatio,
-                    'style' => $this->style,
-                    'composition' => $this->composition,
-                    'lighting' => $this->lighting,
-                    'angle' => $this->angle,
-                    'lens_type' => $this->lensType,
-                    'film_simulation' => $this->filmSimulation,
-                ],
-                'status' => 'processing',
+                'input_json' => array_merge($payload, ['generation_mode' => $this->generationMode]),
+                'status' => 'completed',
                 'started_at' => now(),
+                'finished_at' => now(),
             ]);
 
-            // Dispatch job to process the image generation
-            // ProcessImageJob::dispatch($job);
-            
-            // For now, we'll simulate a success response
-            $this->isProcessing = false;
             $this->loadRecentJobs();
-            
-            session()->flash('message', 'Image generation job started successfully!');
-            
+            session()->flash('message', __('Images generated successfully.'));
         } catch (\Exception $e) {
             $this->isProcessing = false;
-            session()->flash('error', 'Failed to start image generation: ' . $e->getMessage());
+            report($e);
+            session()->flash('error', __('Failed to generate images: :message', [
+                'message' => $e->getMessage(),
+            ]));
+            return;
+        }
+
+        $this->isProcessing = false;
+    }
+
+    public function setGenerationMode(string $mode): void
+    {
+        if (!in_array($mode, ['text-to-image', 'image-only', 'text-image'], true)) {
+            return;
+        }
+
+        $this->generationMode = $mode;
+        $this->resetErrorBag();
+        $this->resetValidation();
+    }
+
+    public function downloadImage(): ?StreamedResponse
+    {
+        if ($this->selectedImageIndex === null) {
+            return null;
+        }
+
+        $image = $this->generatedImages[$this->selectedImageIndex] ?? null;
+
+        if (!$image || empty($image['data'])) {
+            session()->flash('error', __('Unable to download the selected image.'));
+            return null;
+        }
+
+        $filename = sprintf(
+            'imagen-%s-%d.png',
+            now()->format('Ymd-His'),
+            $this->selectedImageIndex + 1
+        );
+
+        return response()->streamDownload(function () use ($image) {
+            echo base64_decode($image['data']);
+        }, $filename, [
+            'Content-Type' => $image['mime'] ?? 'image/png',
+        ]);
+    }
+
+    public function resetForm(): void
+    {
+        $this->reset([
+            'prompt',
+            'negativePrompt',
+            'imageCount',
+            'aspectRatio',
+            'style',
+            'composition',
+            'lighting',
+            'angle',
+            'lensType',
+            'filmSimulation',
+            'image',
+            'generatedImages',
+            'selectedImageIndex',
+        ]);
+
+        $this->imageCount = 1;
+        $this->aspectRatio = '1:1';
+        $this->style = 'photographic';
+        $this->generationMode = 'text-to-image';
+    }
+
+    public function updatedImage(): void
+    {
+        if ($this->image) {
+            $this->validateOnly('image');
         }
     }
 
-    public function setActiveTab($tab)
+    protected function buildPayload(): array
     {
-        $this->activeTab = $tab;
+        return [
+            'prompt' => $this->prompt,
+            'negative_prompt' => $this->negativePrompt,
+            'image_count' => $this->imageCount,
+            'aspect_ratio' => $this->aspectRatio,
+            'style' => $this->style,
+            'composition' => $this->composition,
+            'lighting' => $this->lighting,
+            'angle' => $this->angle,
+            'lensType' => $this->lensType,
+            'filmSimulation' => $this->filmSimulation,
+        ];
     }
 
     public function render()
