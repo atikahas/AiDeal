@@ -21,6 +21,7 @@ new class extends Component {
     public array $generatedImages = [];
     public ?int $selectedImageIndex = null;
     public int $imageCount = 1;
+    public string $aspectRatio = '1:1';
     
     public array $styles = [
         'Photography',
