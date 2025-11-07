@@ -3,26 +3,18 @@
 namespace App\Livewire\AiImageIdeaSuite;
 
 use Livewire\Component;
-use Livewire\WithFileUploads;
 use App\Models\ImageJob;
 use App\Services\Ai\ImagenClient;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ImageGeneration extends Component
 {
-    use WithFileUploads;
-
     public $prompt = '';
     public $negativePrompt = '';
     public $imageCount = 1;
     public $aspectRatio = '1:1';
     public $style = 'photographic';
-    public $sourceImage;
-    public $imageGenerationPhoto = [];
-    public $temporary_previews = [];
     public $isProcessing = false;
-    public $uploadedFiles = [];
     public $recentJobs = [];
     public $activeTab = 'text-to-image';
     public $showAdvancedSettings = false;
@@ -46,85 +38,10 @@ class ImageGeneration extends Component
         'style' => 'required|string',
     ];
     
-    protected function rulesForUploads()
-    {
-        return [
-            'imageGenerationPhoto' => 'array|max:5',
-            'imageGenerationPhoto.*' => 'image|max:5120',
-        ];
-    }
-
-    protected $messages = [
-        'imageGenerationPhoto.*.image' => 'Each file must be an image',
-        'imageGenerationPhoto.*.max' => 'Each image must not be larger than 5MB',
-        'imageGenerationPhoto.*.uploaded' => 'The file upload failed. The file may be too large or in an invalid format.',
-        'imageGenerationPhoto.max' => 'You can upload a maximum of 5 images',
-    ];
-
-    protected $validationAttributes = [
-        'imageGenerationPhoto.*' => 'image',
-    ];
-
     public function mount()
     {
         $this->loadRecentJobs();
         $this->initializeOptions();
-        $this->previewImages = [];
-    }
-
-    public function updatedImageGenerationPhoto()
-    {
-        $this->resetErrorBag();
-        
-        try {
-            // Validate the uploaded files
-            $this->validateOnly('imageGenerationPhoto');
-            
-            // Process each file
-            $this->temporary_previews = [];
-            
-            foreach ($this->imageGenerationPhoto as $file) {
-                $this->temporary_previews[] = [
-                    'url' => $file->temporaryUrl(),
-                    'name' => $file->getClientOriginalName(),
-                    'size' => $this->formatBytes($file->getSize())
-                ];
-            }
-            
-            // Store the uploaded files for later use
-            $this->uploadedFiles = $this->imageGenerationPhoto;
-            
-        } catch (\Exception $e) {
-            $this->addError('imageGenerationPhoto', $e->getMessage());
-            $this->imageGenerationPhoto = [];
-            $this->temporary_previews = [];
-        }
-    }
-    
-    public function removeImage($index)
-    {
-        if (isset($this->temporary_previews[$index])) {
-            // Remove the preview and corresponding file
-            unset($this->temporary_previews[$index]);
-            unset($this->imageGenerationPhoto[$index]);
-            
-            // Reset array keys
-            $this->temporary_previews = array_values($this->temporary_previews);
-            $this->imageGenerationPhoto = array_values($this->imageGenerationPhoto);
-            
-            // Clear any previous errors
-            $this->resetErrorBag('imageGenerationPhoto');
-        }
-    }
-
-
-    private function formatBytes($bytes, $precision = 2)
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        return round($bytes / (1024 ** $pow), $precision) . ' ' . $units[$pow];
     }
 
     protected function initializeOptions()
@@ -176,12 +93,6 @@ class ImageGeneration extends Component
                 'started_at' => now(),
             ]);
 
-            // Store source image if provided
-            if ($this->sourceImage) {
-                $path = $this->sourceImage->store("ai-image-suite/" . auth()->id(), 'public');
-                $job->update(['source_image_path' => $path]);
-            }
-
             // Dispatch job to process the image generation
             // ProcessImageJob::dispatch($job);
             
@@ -200,7 +111,6 @@ class ImageGeneration extends Component
     public function setActiveTab($tab)
     {
         $this->activeTab = $tab;
-        $this->reset(['sourceImage']);
     }
 
     public function render()
