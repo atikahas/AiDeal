@@ -100,7 +100,7 @@ Key environment variables (set in `.env`):
 # Gemini/Imagen API Configuration
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 GEMINI_MODEL=gemini-2.5-flash
-GEMINI_IMAGEN_MODEL=imagen-4.0-generate-preview-06-06
+GEMINI_IMAGEN_MODEL=gemini-2.5-flash-image
 GEMINI_IMAGE_TIMEOUT=120
 
 # Database (SQLite by default)

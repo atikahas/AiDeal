@@ -5,9 +5,6 @@
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 {{ __('Generate images from text prompts using AI.') }}
             </p>
-            <div class="mt-2 rounded-md bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                <strong>{{ __('Note:') }}</strong> {{ __('Text + Image mode will use your prompt to generate a new image inspired by your description.') }}
-            </div>
         </div>
 
         @if (session()->has('error') || session()->has('message'))
@@ -88,17 +85,6 @@
                 @error('prompt')
                     <p class="text-xs text-red-500">{{ $message }}</p>
                 @enderror
-            </div>
-            
-            <div class="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-                <p class="font-medium">{{ __('Model') }}: <span class="font-semibold">{{ $activeModel }}</span></p>
-                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    @if(str_starts_with($activeModel, 'gemini-'))
-                        {{ __('Using Gemini model - supports text and image input together.') }}
-                    @else
-                        {{ __('Using Imagen model - text-to-image generation only.') }}
-                    @endif
-                </p>
             </div>
             
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

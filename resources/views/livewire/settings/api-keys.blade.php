@@ -197,7 +197,7 @@ new class extends Component {
             ],
             [
                 'label' => __('Image Generation'),
-                'model' => 'imagen-4.0-generate-001',
+                'model' => 'gemini-2.5-flash-image',
                 'provider' => 'Gemini Imagen',
             ],
             [

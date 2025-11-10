@@ -58,7 +58,7 @@ class ImageGeneration extends Component
         
         $this->filmSimulations = ['Kodak Portra 400','Fujifilm Provia','Kodak Ektar 100','Fujifilm Velvia 50','Ilford HP5+ 400','Kodak Tri-X 400','Fujifilm Superia 400','Kodak Gold 200','Cinestill 800T','Fujifilm Acros 100'];
 
-        $this->activeModel = config('services.gemini.imagen_default_model', 'imagen-4.0-generate-preview-06-06');
+        $this->activeModel = config('services.gemini.imagen_default_model', 'gemini-2.5-flash-image');
     }
 
     protected function rules(): array

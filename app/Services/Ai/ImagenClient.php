@@ -19,7 +19,7 @@ class ImagenClient
     public function __construct(?string $apiKey = null)
     {
         $this->baseUrl = rtrim(Config::get('services.gemini.base_url', 'https://generativelanguage.googleapis.com/v1beta'), '/');
-        $this->defaultModel = Config::get('services.gemini.imagen_default_model', 'imagen-4.0-generate-preview-06-06');
+        $this->defaultModel = Config::get('services.gemini.imagen_default_model', 'gemini-2.5-flash-image');
         $this->timeout = (int) Config::get('services.gemini.image_timeout', 90);
         $this->apiKey = $apiKey ?? $this->resolveApiKey();
     }

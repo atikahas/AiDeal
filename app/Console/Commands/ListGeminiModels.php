@@ -99,7 +99,7 @@ class ListGeminiModels extends Command
         $this->info("\n\nTesting specific models for image capabilities...");
         $testModels = [
             'imagen-3.0-generate-001',
-            'imagen-4.0-generate-preview-06-06',
+            'gemini-2.5-flash-image',
             'gemini-2.5-flash-image',
             'gemini-2.0-flash',
             'gemini-1.5-flash',
