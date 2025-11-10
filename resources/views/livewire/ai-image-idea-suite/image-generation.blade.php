@@ -16,7 +16,7 @@
         <form wire:submit.prevent="generateImage" class="space-y-4">
             <div class="flex flex-wrap gap-2 rounded-xl border border-dashed border-zinc-200 p-2 dark:border-zinc-700">
                 @foreach([
-                    'text-to-image' => __('Text → Image'),
+                    'text-to-image' => __('Text'),
                     'text-image' => __('Text + Image'),
                 ] as $mode => $label)
                     <button
