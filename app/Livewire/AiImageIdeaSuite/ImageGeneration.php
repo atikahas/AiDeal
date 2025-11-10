@@ -25,6 +25,7 @@ class ImageGeneration extends Component
     public $angleOptions = [];
     public $lensTypes = [];
     public $filmSimulations = [];
+    public $activeModel;
     public $compositions = [];
     public $composition = '';
     public $lighting = '';
@@ -55,12 +56,14 @@ class ImageGeneration extends Component
         $this->lensTypes = ['Prime','Wide Angle','Telephoto','Macro','Fisheye','Tilt-Shift','Zoom','Portrait'];
         
         $this->filmSimulations = ['Kodak Portra 400','Fujifilm Provia','Kodak Ektar 100','Fujifilm Velvia 50','Ilford HP5+ 400','Kodak Tri-X 400','Fujifilm Superia 400','Kodak Gold 200','Cinestill 800T','Fujifilm Acros 100'];
+
+        $this->activeModel = config('services.gemini.imagen_default_model', 'imagen-4.0-generate-preview-06-06');
     }
 
     protected function rules(): array
     {
         $rules = [
-            'prompt' => 'nullable|string|max:1000',
+            'prompt' => 'required|string|max:1000',
             'negativePrompt' => 'nullable|string|max:1000',
             'imageCount' => 'required|integer|min:1|max:5',
             'aspectRatio' => 'required|in:1:1,4:3,16:9,9:16,3:2',
@@ -73,10 +76,6 @@ class ImageGeneration extends Component
             'image' => 'nullable|image|max:10240',
             'generationMode' => 'required|string|in:text-to-image,image-only,text-image',
         ];
-
-        if (in_array($this->generationMode, ['text-to-image', 'text-image'], true)) {
-            $rules['prompt'] = 'required|string|max:1000';
-        }
 
         if ($this->generationMode !== 'text-to-image') {
             $rules['image'] = 'required|image|max:10240';
@@ -96,6 +95,10 @@ class ImageGeneration extends Component
 
     public function generateImage()
     {
+        $this->prompt = trim((string) $this->prompt);
+        $this->negativePrompt = trim((string) $this->negativePrompt);
+        $this->prompt = $this->prompt !== '' ? $this->prompt : $this->defaultPrompt();
+
         $this->validate();
         $this->isProcessing = true;
         $this->resetErrorBag();
@@ -219,7 +222,13 @@ class ImageGeneration extends Component
             'angle' => $this->angle,
             'lensType' => $this->lensType,
             'filmSimulation' => $this->filmSimulation,
+            'model' => $this->activeModel,
         ];
+    }
+
+    protected function defaultPrompt(): string
+    {
+        return __('High quality photo');
     }
 
     public function render()

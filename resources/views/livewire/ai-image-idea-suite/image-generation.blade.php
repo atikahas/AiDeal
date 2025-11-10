@@ -7,6 +7,12 @@
             </p>
         </div>
 
+        @if (session()->has('error') || session()->has('message'))
+            <div class="rounded-lg border px-4 py-3 text-sm {{ session()->has('error') ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' }}">
+                {{ session('error') ?? session('message') }}
+            </div>
+        @endif
+
         <form wire:submit.prevent="generateImage" class="space-y-4">
             <div class="flex flex-wrap gap-2 rounded-xl border border-dashed border-zinc-200 p-2 dark:border-zinc-700">
                 @foreach([
@@ -53,6 +59,12 @@
                 @error('prompt')
                     <p class="text-xs text-red-500">{{ $message }}</p>
                 @enderror
+            </div>
+            <div class="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+                <p class="font-medium">{{ __('Imagen Model') }}: <span class="font-semibold">{{ strtoupper($activeModel) }}</span></p>
+                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    {{ __('This workspace always uses Imagen 4.0 for the best fidelity.') }}
+                </p>
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2">
@@ -186,8 +198,19 @@
             @else
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     @foreach($generatedImages as $index => $image)
+                        @php
+                            $src = $image['url'] ?? null;
+                            if (! $src && isset($image['data'])) {
+                                $mime = $image['mime'] ?? 'image/png';
+                                $src = 'data:' . $mime . ';base64,' . $image['data'];
+                            } elseif (! $src && is_string($image)) {
+                                $src = $image;
+                            }
+                        @endphp
                         <div class="relative cursor-pointer overflow-hidden rounded-lg border-2 {{ $selectedImageIndex === $index ? 'border-blue-500 ring-2 ring-blue-500' : 'border-transparent' }}" wire:click="$set('selectedImageIndex', {{ $index }})">
-                            <img src="{{ $image['url'] ?? $image }}" alt="Generated image {{ $index + 1 }}" class="h-full w-full object-cover">
+                            @if($src)
+                                <img src="{{ $src }}" alt="Generated image {{ $index + 1 }}" class="h-full w-full object-cover">
+                            @endif
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-white">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium">Variant #{{ $index + 1 }}</span>
