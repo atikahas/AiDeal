@@ -19,7 +19,7 @@ class ImagenClient
     public function __construct(?string $apiKey = null)
     {
         $this->baseUrl = rtrim(Config::get('services.gemini.base_url', 'https://generativelanguage.googleapis.com/v1beta'), '/');
-        $this->defaultModel = Config::get('services.gemini.imagen_default_model', 'gemini-2.5-flash-image');
+        $this->defaultModel = Config::get('services.gemini.imagen_default_model', 'imagen-4.0-generate-preview-06-06');
         $this->timeout = (int) Config::get('services.gemini.image_timeout', 90);
         $this->apiKey = $apiKey ?? $this->resolveApiKey();
     }
@@ -170,25 +170,52 @@ class ImagenClient
             ];
         }
         
-        $payload = [
-            'contents' => [
-                [
-                    'parts' => $parts
-                ]
-            ],
-            'generationConfig' => [
-                'temperature' => 0.8,
-                'topK' => 40,
-                'topP' => 0.95,
-                'candidateCount' => (int) ($options['image_count'] ?? 1),
-                'maxOutputTokens' => 8192,
-            ]
-        ];
+        $imageCount = (int) ($options['image_count'] ?? 1);
+        $images = [];
         
-        return $this->send(
-            $this->resolveModel($options) . ':generateContent',
-            $payload
-        );
+        // Most Gemini models don't support multiple candidates for image generation
+        // So we need to make multiple requests
+        for ($i = 0; $i < $imageCount; $i++) {
+            $payload = [
+                'contents' => [
+                    [
+                        'parts' => $parts
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.8,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'candidateCount' => 1, // Always use 1 for compatibility
+                    'maxOutputTokens' => 8192,
+                ]
+            ];
+            
+            try {
+                $response = $this->send(
+                    $this->resolveModel($options) . ':generateContent',
+                    $payload
+                );
+                
+                // Merge the results
+                $images = array_merge($images, $response);
+                
+            } catch (\Exception $e) {
+                // If we got at least one image, don't fail completely
+                if (!empty($images)) {
+                    Log::warning('Failed to generate some images in batch', [
+                        'error' => $e->getMessage(),
+                        'index' => $i,
+                        'total_requested' => $imageCount
+                    ]);
+                    break;
+                } else {
+                    throw $e;
+                }
+            }
+        }
+        
+        return $images;
     }
     
     protected function generateWithImage(array $options, UploadedFile $image): array

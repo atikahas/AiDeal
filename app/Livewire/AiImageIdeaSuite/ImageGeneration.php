@@ -6,7 +6,10 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\ImageJob;
 use App\Services\Ai\ImagenClient;
+use App\Services\AiActivityLogger;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ImageGeneration extends Component
 {
@@ -37,6 +40,7 @@ class ImageGeneration extends Component
     public $selectedImageIndex = null;
     public $generationMode = 'text-to-image';
     public $imagePreviewUrl;
+    public $currentImageJobId = null;
 
     public function mount()
     {
@@ -58,7 +62,7 @@ class ImageGeneration extends Component
         
         $this->filmSimulations = ['Kodak Portra 400','Fujifilm Provia','Kodak Ektar 100','Fujifilm Velvia 50','Ilford HP5+ 400','Kodak Tri-X 400','Fujifilm Superia 400','Kodak Gold 200','Cinestill 800T','Fujifilm Acros 100'];
 
-        $this->activeModel = config('services.gemini.imagen_default_model', 'gemini-2.5-flash-image');
+        $this->activeModel = config('services.gemini.imagen_default_model', 'imagen-4.0-generate-preview-06-06');
     }
 
     protected function rules(): array
@@ -113,6 +117,8 @@ class ImageGeneration extends Component
         $payload = $this->buildPayload();
         $client = app(ImagenClient::class);
 
+        $startTime = microtime(true);
+        
         try {
             $images = match ($this->generationMode) {
                 'text-image' => $client->editImage($payload, $this->image),
@@ -122,19 +128,63 @@ class ImageGeneration extends Component
             $this->generatedImages = $images;
             $this->selectedImageIndex = empty($images) ? null : 0;
 
-            ImageJob::create([
+            // Create ImageJob record without saved paths
+            $imageJob = ImageJob::create([
                 'user_id' => auth()->id(),
                 'tool' => 'image-generation',
                 'input_json' => array_merge($payload, ['generation_mode' => $this->generationMode]),
+                'generated_images' => null, // Will be populated when user saves
                 'status' => 'completed',
+                'is_saved' => false, // Not saved by default
                 'started_at' => now(),
                 'finished_at' => now(),
             ]);
+            
+            // Store the current image job ID
+            $this->currentImageJobId = $imageJob->id;
+
+            // Log to AI Activity
+            $latencyMs = (int)((microtime(true) - $startTime) * 1000);
+            AiActivityLogger::log(
+                activityType: 'image_generation',
+                model: $payload['model'] ?? $this->activeModel,
+                prompt: $this->prompt,
+                output: 'Generated ' . count($images) . ' image(s)',
+                tokenCount: 0, // Image generation doesn't have token count
+                status: 'success',
+                latencyMs: $latencyMs,
+                meta: [
+                    'generation_mode' => $this->generationMode,
+                    'image_count' => count($images),
+                    'aspect_ratio' => $this->aspectRatio,
+                    'style' => $this->style,
+                    'image_job_id' => $imageJob->id,
+                ]
+            );
 
             $this->loadRecentJobs();
             session()->flash('message', __('Images generated successfully.'));
         } catch (\Exception $e) {
             $this->isProcessing = false;
+            
+            // Log failure to AI Activity
+            $latencyMs = (int)((microtime(true) - $startTime) * 1000);
+            AiActivityLogger::log(
+                activityType: 'image_generation',
+                model: $payload['model'] ?? $this->activeModel,
+                prompt: $this->prompt,
+                output: null,
+                tokenCount: 0,
+                status: 'error',
+                errorMessage: $e->getMessage(),
+                latencyMs: $latencyMs,
+                meta: [
+                    'generation_mode' => $this->generationMode,
+                    'aspect_ratio' => $this->aspectRatio,
+                    'style' => $this->style,
+                ]
+            );
+            
             report($e);
             session()->flash('error', __('Failed to generate images: :message', [
                 'message' => $e->getMessage(),
@@ -203,6 +253,7 @@ class ImageGeneration extends Component
             'image',
             'generatedImages',
             'selectedImageIndex',
+            'currentImageJobId',
         ]);
 
         $this->imageCount = 1;
@@ -243,6 +294,65 @@ class ImageGeneration extends Component
     protected function defaultPrompt(): string
     {
         return __('High quality photo');
+    }
+
+    public function saveSelectedImage(): void
+    {
+        if ($this->selectedImageIndex === null || !$this->currentImageJobId) {
+            session()->flash('error', __('Please select an image to save.'));
+            return;
+        }
+
+        $image = $this->generatedImages[$this->selectedImageIndex] ?? null;
+        if (!$image || empty($image['data'])) {
+            session()->flash('error', __('Unable to save the selected image.'));
+            return;
+        }
+
+        try {
+            $userId = auth()->id();
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            
+            // Generate unique filename
+            $filename = sprintf(
+                'ai-images/%s/%s_%s_%d.png',
+                $userId,
+                Str::slug($this->activeModel),
+                $timestamp,
+                $this->selectedImageIndex + 1
+            );
+            
+            // Decode base64 image data
+            $imageData = base64_decode($image['data']);
+            
+            // Save to storage
+            Storage::disk('public')->put($filename, $imageData);
+            
+            $savedImageData = [
+                'path' => $filename,
+                'mime' => $image['mime'] ?? 'image/png',
+                'url' => Storage::disk('public')->url($filename),
+                'size' => strlen($imageData),
+            ];
+            
+            // Update the ImageJob record
+            $imageJob = ImageJob::find($this->currentImageJobId);
+            if ($imageJob) {
+                $existingImages = $imageJob->generated_images ?? [];
+                $existingImages[] = $savedImageData;
+                
+                $imageJob->update([
+                    'generated_images' => $existingImages,
+                    'is_saved' => true,
+                ]);
+            }
+            
+            session()->flash('message', __('Image saved successfully.'));
+            
+        } catch (\Exception $e) {
+            report($e);
+            session()->flash('error', __('Failed to save the image.'));
+        }
     }
 
     public function render()

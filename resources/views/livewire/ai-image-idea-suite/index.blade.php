@@ -15,6 +15,7 @@
                 'model-photos' => __('Model Photos'),
                 'image-enhancer' => __('Image Enhancer'),
                 'background-remover' => __('Background Remover'),
+                'saved-images' => __('Saved Images'),
             ] as $tabKey => $label)
                 <button
                     type="button"
@@ -31,7 +32,10 @@
         </div>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-[360px,1fr] xl:grid-cols-[380px,1fr]">
+    <div @class([
+        'grid gap-6 lg:grid-cols-[360px,1fr] xl:grid-cols-[380px,1fr]' => $activeTab !== 'saved-images',
+        '' => $activeTab === 'saved-images',
+    ])>
         @if ($activeTab === 'image-generation')
             <livewire:ai-image-idea-suite.image-generation />
         @elseif($activeTab === 'product-photos')
@@ -42,6 +46,8 @@
             <livewire:ai-image-idea-suite.image-enhancer />
         @elseif($activeTab === 'background-remover')
             <livewire:ai-image-idea-suite.background-remover />
+        @elseif($activeTab === 'saved-images')
+            <livewire:ai-image-idea-suite.saved-images />
         @endif
     </div>
 </div>

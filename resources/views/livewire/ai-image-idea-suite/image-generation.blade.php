@@ -93,7 +93,7 @@
                         {{ __('Number of Images') }}
                     </label>
                     <select id="image-count" wire:model.live="imageCount" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                        @for($i = 1; $i <= 5; $i++)
+                        @for($i = 1; $i <= 4; $i++)
                             <option value="{{ $i }}">{{ $i }} {{ $i === 1 ? 'Image' : 'Images' }}</option>
                         @endfor
                     </select>
@@ -248,11 +248,18 @@
                 
                 @if($selectedImageIndex !== null)
                     <div class="mt-4 flex justify-end space-x-2">
+                        <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-70" wire:click="saveSelectedImage" wire:loading.attr="disabled" wire:target="saveSelectedImage">
+                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2" />
+                            </svg>
+                            <span wire:loading.remove wire:target="saveSelectedImage">{{ __('Save to Gallery') }}</span>
+                            <span wire:loading wire:target="saveSelectedImage">{{ __('Saving...') }}</span>
+                        </button>
                         <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70" wire:click="downloadImage" wire:loading.attr="disabled" wire:target="downloadImage">
                             <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
-                            {{ __('Download Selected') }}
+                            {{ __('Download') }}
                         </button>
                     </div>
                 @endif

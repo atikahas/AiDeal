@@ -14,7 +14,9 @@ class ImageJob extends Model
         'source_image_path',
         'mask_image_path',
         'result_image_path',
+        'generated_images',
         'status',
+        'is_saved',
         'error_message',
         'started_at',
         'finished_at',
@@ -22,6 +24,8 @@ class ImageJob extends Model
 
     protected $casts = [
         'input_json' => 'array',
+        'generated_images' => 'array',
+        'is_saved' => 'boolean',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
     ];
