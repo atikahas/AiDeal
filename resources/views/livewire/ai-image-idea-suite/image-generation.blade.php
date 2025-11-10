@@ -208,12 +208,7 @@
             <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{{ __('Output') }}</h2>
         </header>
 
-        <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900"
-            x-data="{ 
-                localSelectedIndex: @entangle('selectedImageIndex'),
-                localSelectedIndexes: @entangle('selectedImageIndexes'),
-                multiSelectMode: @entangle('multiSelectMode')
-            }">
+        <div class="min-h-[360px] rounded-lg border border-zinc-100 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900">
             @if(empty($generatedImages))
                 <div class="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center text-zinc-400">
                     <flux:icon.photo variant="outline" class="size-10 text-zinc-300 dark:text-zinc-600" />
@@ -222,47 +217,6 @@
                     </p>
                 </div>
             @else
-                <!-- Multi-select controls -->
-                <div class="mb-4 flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <button
-                            type="button"
-                            @click="$wire.toggleMultiSelect()"
-                            class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition"
-                            :class="multiSelectMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'"
-                        >
-                            <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {{ __('Multi-select') }}
-                        </button>
-                        
-                        <template x-if="multiSelectMode">
-                            <div class="flex items-center space-x-2">
-                                <button
-                                    type="button"
-                                    wire:click="selectAll"
-                                    class="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                                >
-                                    {{ __('Select all') }}
-                                </button>
-                                <span class="text-zinc-400">|</span>
-                                <button
-                                    type="button"
-                                    wire:click="deselectAll"
-                                    class="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                                >
-                                    {{ __('Deselect all') }}
-                                </button>
-                            </div>
-                        </template>
-                    </div>
-                    
-                    <div x-show="localSelectedIndexes.length > 0" class="text-sm text-zinc-600 dark:text-zinc-400">
-                        <span x-text="localSelectedIndexes.length"></span> {{ __('selected') }}
-                    </div>
-                </div>
-                
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     @foreach($generatedImages as $index => $image)
                         @php
@@ -274,48 +228,55 @@
                                 $src = $image;
                             }
                         @endphp
-                        <div class="relative cursor-pointer overflow-hidden rounded-lg border-2"
-                            :class="{
-                                'border-blue-500 ring-2 ring-blue-500': multiSelectMode ? localSelectedIndexes.includes({{ $index }}) : localSelectedIndex === {{ $index }},
-                                'border-transparent': multiSelectMode ? !localSelectedIndexes.includes({{ $index }}) : localSelectedIndex !== {{ $index }}
-                            }"
-                            @click="$wire.selectImage({{ $index }})"
-                            wire:key="image-{{ $index }}">
-                            @if($src)
-                                <img src="{{ $src }}" alt="Generated image {{ $index + 1 }}" class="h-full w-full object-cover">
-                            @endif
-                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-white">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-medium">Variant #{{ $index + 1 }}</span>
-                                    <template x-if="multiSelectMode ? localSelectedIndexes.includes({{ $index }}) : localSelectedIndex === {{ $index }}">
-                                        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                        </svg>
-                                    </template>
+                        <div class="group relative overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                            <div class="aspect-square w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                                @if($src)
+                                    <img 
+                                        src="{{ $src }}" 
+                                        alt="Generated image {{ $index + 1 }}" 
+                                        class="h-full w-full object-cover transition-opacity group-hover:opacity-90"
+                                        wire:click="selectImage({{ $index }})"
+                                    >
+                                @endif
+                            </div>
+                            
+                            <div class="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+                                <div class="flex w-full items-center justify-between p-3">
+                                    <span class="text-sm font-medium text-white">#{{ $index + 1 }}</span>
+                                    
+                                    <div class="flex items-center space-x-2">
+                                        <button 
+                                            type="button" 
+                                            class="inline-flex items-center justify-center rounded-md bg-white/10 p-1.5 text-white backdrop-blur-sm hover:bg-white/20"
+                                            wire:click="saveImage({{ $index }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="saveImage({{ $index }})"
+                                            title="Save"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                            </svg>
+                                            <span class="sr-only">{{ __('Save') }}</span>
+                                        </button>
+                                        
+                                        <a 
+                                            href="#" 
+                                            class="inline-flex items-center justify-center rounded-md bg-white/10 p-1.5 text-white backdrop-blur-sm hover:bg-white/20"
+                                            wire:click.prevent="downloadImage({{ $index }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="downloadImage({{ $index }})"
+                                            title="Download"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            <span class="sr-only">{{ __('Download') }}</span>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     @endforeach
-                </div>
-                
-                <div x-show="localSelectedIndexes.length > 0" x-cloak class="mt-4 flex justify-end space-x-2">
-                        <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed" wire:click="saveSelectedImages" wire:loading.attr="disabled" wire:target="saveSelectedImages">
-                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2" />
-                            </svg>
-                            <span wire:loading.remove wire:target="saveSelectedImages">
-                                <span x-show="localSelectedIndexes.length === 1">{{ __('Save to Gallery') }}</span>
-                                <span x-show="localSelectedIndexes.length > 1">{{ __('Save :count to Gallery', ['count' => '<span x-text="localSelectedIndexes.length"></span>']) }}</span>
-                            </span>
-                            <span wire:loading wire:target="saveSelectedImages">{{ __('Saving...') }}</span>
-                        </button>
-                        <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed" wire:click="downloadSelectedImages" wire:loading.attr="disabled" wire:target="downloadSelectedImages">
-                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            <span x-show="localSelectedIndexes.length === 1">{{ __('Download') }}</span>
-                            <span x-show="localSelectedIndexes.length > 1">{{ __('Download :count', ['count' => '<span x-text="localSelectedIndexes.length"></span>']) }}</span>
-                        </button>
                 </div>
             @endif
         </div>

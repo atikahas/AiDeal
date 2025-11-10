@@ -38,8 +38,6 @@ class ImageGeneration extends Component
     public $image;
     public $generatedImages = [];
     public $selectedImageIndex = null;
-    public $selectedImageIndexes = [];
-    public $isMultiSelectMode = false;
     public $generationMode = 'text-to-image';
     public $imagePreviewUrl;
     public $currentImageJobId = null;
@@ -213,32 +211,6 @@ class ImageGeneration extends Component
         }
     }
 
-    public function downloadImage(): ?StreamedResponse
-    {
-        if ($this->selectedImageIndex === null) {
-            return null;
-        }
-
-        $image = $this->generatedImages[$this->selectedImageIndex] ?? null;
-
-        if (!$image || empty($image['data'])) {
-            session()->flash('error', __('Unable to download the selected image.'));
-            return null;
-        }
-
-        $filename = sprintf(
-            'imagen-%s-%d.png',
-            now()->format('Ymd-His'),
-            $this->selectedImageIndex + 1
-        );
-
-        return response()->streamDownload(function () use ($image) {
-            echo base64_decode($image['data']);
-        }, $filename, [
-            'Content-Type' => $image['mime'] ?? 'image/png',
-        ]);
-    }
-
     public function resetForm(): void
     {
         $this->reset([
@@ -300,181 +272,97 @@ class ImageGeneration extends Component
 
     public function selectImage($index): void
     {
-        if ($this->isMultiSelectMode) {
-            $index = (int)$index;
-            $selectedIndexes = $this->selectedImageIndexes ?? [];
-            
-            if (($key = array_search($index, $selectedIndexes)) !== false) {
-                unset($selectedIndexes[$key]);
-            } else {
-                $selectedIndexes[] = $index;
-            }
-            
-            $this->selectedImageIndexes = array_values($selectedIndexes);
-            $this->selectedImageIndex = !empty($this->selectedImageIndexes) ? $this->selectedImageIndexes[0] : null;
-        } else {
-            $this->selectedImageIndex = (int)$index;
-            $this->selectedImageIndexes = [$this->selectedImageIndex];
-        }
+        $this->selectedImageIndex = (int)$index;
     }
 
-    public function toggleMultiSelectMode(): void
+    public function saveImage($index): void
     {
-        $this->isMultiSelectMode = !$this->isMultiSelectMode;
-        if (!$this->isMultiSelectMode) {
-            $this->selectedImageIndexes = $this->selectedImageIndex !== null ? [$this->selectedImageIndex] : [];
-        }
-    }
-
-    public function saveSelectedImages(): void
-    {
-        $indexes = $this->isMultiSelectMode ? ($this->selectedImageIndexes ?? []) : 
-                  ($this->selectedImageIndex !== null ? [$this->selectedImageIndex] : []);
-
-        if (empty($indexes) || !$this->currentImageJobId) {
-            session()->flash('error', __('Please select at least one image to save.'));
+        $this->selectedImageIndex = (int)$index;
+        $image = $this->generatedImages[$this->selectedImageIndex] ?? null;
+        
+        if (!$image || empty($image['data'])) {
+            session()->flash('error', __('Unable to save the selected image.'));
             return;
         }
 
-        $savedCount = 0;
-        $errors = [];
-        
-        foreach ($indexes as $index) {
-            $image = $this->generatedImages[$index] ?? null;
-            if (!$image || empty($image['data'])) {
-                $errors[] = __('Unable to save image #:number', ['number' => $index + 1]);
-                continue;
-            }
+        if (!$this->currentImageJobId) {
+            session()->flash('error', __('Invalid image job.'));
+            return;
+        }
 
-            try {
-                $userId = auth()->id();
-                $timestamp = now()->format('Y-m-d_H-i-s');
-                
-                // Generate unique filename
-                $filename = sprintf(
-                    'ai-images/%s/%s_%s_%d.png',
-                    $userId,
-                    Str::slug($this->activeModel),
-                    $timestamp,
-                    $index + 1
-                );
-                
-                // Decode base64 image data
-                $imageData = base64_decode($image['data']);
-                
-                // Save to storage
-                Storage::disk('public')->put($filename, $imageData);
-                
-                $savedImageData = [
-                    'path' => $filename,
-                    'mime' => $image['mime'] ?? 'image/png',
-                    'url' => Storage::disk('public')->url($filename),
-                    'size' => strlen($imageData),
-                ];
-                
-                // Update the ImageJob record
-                $imageJob = ImageJob::find($this->currentImageJobId);
-                if ($imageJob) {
-                    $existingImages = $imageJob->generated_images ?? [];
-                    $existingImages[] = $savedImageData;
-                    
-                    $imageJob->update([
-                        'generated_images' => $existingImages,
-                        'is_saved' => true,
-                    ]);
-                }
-                
-                $savedCount++;
-                
-            } catch (\Exception $e) {
-                report($e);
-                $errors[] = __('Failed to save image #:number', ['number' => $index + 1]);
-            }
-        }
-        
-        if ($savedCount > 0) {
-            session()->flash('message', 
-                $savedCount === 1 ? 
-                __('1 image saved successfully.') : 
-                __(':count images saved successfully.', ['count' => $savedCount])
+        try {
+            $userId = auth()->id();
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            
+            // Generate unique filename
+            $filename = sprintf(
+                'ai-images/%s/%s_%s_%d.png',
+                $userId,
+                Str::slug($this->activeModel),
+                $timestamp,
+                $this->selectedImageIndex + 1
             );
-        }
-        
-        if (!empty($errors)) {
-            session()->flash('error', implode("\n", $errors));
+            
+            // Decode base64 image data
+            $imageData = base64_decode($image['data']);
+            
+            // Save to storage
+            Storage::disk('public')->put($filename, $imageData);
+            
+            $savedImageData = [
+                'path' => $filename,
+                'mime' => $image['mime'] ?? 'image/png',
+                'url' => Storage::disk('public')->url($filename),
+                'size' => strlen($imageData),
+            ];
+            
+            // Update the ImageJob record
+            $imageJob = ImageJob::find($this->currentImageJobId);
+            if ($imageJob) {
+                $existingImages = $imageJob->generated_images ?? [];
+                $existingImages[] = $savedImageData;
+                
+                $imageJob->update([
+                    'generated_images' => $existingImages,
+                    'is_saved' => true,
+                ]);
+            }
+            
+            session()->flash('message', __('Image saved successfully.'));
+            
+        } catch (\Exception $e) {
+            report($e);
+            session()->flash('error', __('Failed to save the image.'));
         }
     }
 
-    public function downloadSelectedImages()
+    public function downloadImage($index = null)
     {
-        $indexes = $this->isMultiSelectMode ? ($this->selectedImageIndexes ?? []) : 
-                  ($this->selectedImageIndex !== null ? [$this->selectedImageIndex] : []);
-
-        if (empty($indexes)) {
-            session()->flash('error', __('Please select at least one image to download.'));
+        $index = $index ?? $this->selectedImageIndex;
+        
+        if ($index === null) {
+            session()->flash('error', __('Please select an image to download.'));
             return null;
         }
 
-        if (count($indexes) === 1) {
-            // Single file download
-            $index = $indexes[0];
-            $image = $this->generatedImages[$index] ?? null;
-            
-            if (!$image || empty($image['data'])) {
-                session()->flash('error', __('Unable to download the selected image.'));
-                return null;
-            }
-
-            $filename = sprintf(
-                'imagen-%s-%d.png',
-                now()->format('Ymd-His'),
-                $index + 1
-            );
-
-            return response()->streamDownload(function () use ($image) {
-                echo base64_decode($image['data']);
-            }, $filename, [
-                'Content-Type' => $image['mime'] ?? 'image/png',
-            ]);
-        } else {
-            // Multiple files - create a zip
-            $zip = new \ZipArchive();
-            $zipName = 'imagen-' . now()->format('Ymd-His') . '.zip';
-            $zipPath = sys_get_temp_dir() . '/' . $zipName;
-            
-            if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
-                session()->flash('error', __('Unable to create zip file.'));
-                return null;
-            }
-            
-            $successCount = 0;
-            
-            foreach ($indexes as $index) {
-                $image = $this->generatedImages[$index] ?? null;
-                if (!$image || empty($image['data'])) {
-                    continue;
-                }
-                
-                $filename = sprintf('image-%d.png', $index + 1);
-                $imageData = base64_decode($image['data']);
-                
-                if ($zip->addFromString($filename, $imageData)) {
-                    $successCount++;
-                }
-            }
-            
-            $zip->close();
-            
-            if ($successCount === 0) {
-                unlink($zipPath);
-                session()->flash('error', __('Unable to download the selected images.'));
-                return null;
-            }
-            
-            return response()->download($zipPath, $zipName, [
-                'Content-Type' => 'application/zip',
-            ])->deleteFileAfterSend(true);
+        $image = $this->generatedImages[$index] ?? null;
+        
+        if (!$image || empty($image['data'])) {
+            session()->flash('error', __('Unable to download the selected image.'));
+            return null;
         }
+
+        $filename = sprintf(
+            'imagen-%s-%d.png',
+            now()->format('Ymd-His'),
+            $index + 1
+        );
+
+        return response()->streamDownload(function () use ($image) {
+            echo base64_decode($image['data']);
+        }, $filename, [
+            'Content-Type' => $image['mime'] ?? 'image/png',
+        ]);
     }
 
     public function render()
