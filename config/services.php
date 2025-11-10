@@ -33,6 +33,7 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
         'imagen_default_model' => env('GEMINI_IMAGEN_MODEL', 'imagen-4.0-generate-preview-06-06'),
         'image_timeout' => env('GEMINI_IMAGE_TIMEOUT', 120),
+        'api_key' => env('GEMINI_API_KEY'),
     ],
 
     'slack' => [

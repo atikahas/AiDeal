@@ -36,6 +36,7 @@ class ImageGeneration extends Component
     public $generatedImages = [];
     public $selectedImageIndex = null;
     public $generationMode = 'text-to-image';
+    public $imagePreviewUrl;
 
     public function mount()
     {
@@ -73,12 +74,12 @@ class ImageGeneration extends Component
             'angle' => 'nullable|string|max:255',
             'lensType' => 'nullable|string|max:255',
             'filmSimulation' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:10240',
-            'generationMode' => 'required|string|in:text-to-image,image-only,text-image',
+            'image' => 'nullable|file|max:2048',
+            'generationMode' => 'required|string|in:text-to-image,text-image',
         ];
 
         if ($this->generationMode !== 'text-to-image') {
-            $rules['image'] = 'required|image|max:10240';
+            $rules['image'] = 'required|file|max:2048';
         }
 
         return $rules;
@@ -97,7 +98,11 @@ class ImageGeneration extends Component
     {
         $this->prompt = trim((string) $this->prompt);
         $this->negativePrompt = trim((string) $this->negativePrompt);
-        $this->prompt = $this->prompt !== '' ? $this->prompt : $this->defaultPrompt();
+        
+        // Set default prompt if empty
+        if ($this->prompt === '') {
+            $this->prompt = $this->defaultPrompt();
+        }
 
         $this->validate();
         $this->isProcessing = true;
@@ -110,7 +115,6 @@ class ImageGeneration extends Component
 
         try {
             $images = match ($this->generationMode) {
-                'image-only' => $client->imageVariations($payload, $this->image),
                 'text-image' => $client->editImage($payload, $this->image),
                 default => $client->textToImage($payload),
             };
@@ -143,13 +147,18 @@ class ImageGeneration extends Component
 
     public function setGenerationMode(string $mode): void
     {
-        if (!in_array($mode, ['text-to-image', 'image-only', 'text-image'], true)) {
+        if (!in_array($mode, ['text-to-image', 'text-image'], true)) {
             return;
         }
 
         $this->generationMode = $mode;
         $this->resetErrorBag();
         $this->resetValidation();
+        
+        // Clear the uploaded image when switching to text-to-image mode
+        if ($mode === 'text-to-image') {
+            $this->image = null;
+        }
     }
 
     public function downloadImage(): ?StreamedResponse
@@ -205,7 +214,12 @@ class ImageGeneration extends Component
     public function updatedImage(): void
     {
         if ($this->image) {
-            $this->validateOnly('image');
+            try {
+                $this->validateOnly('image');
+            } catch (\Exception $e) {
+                $this->image = null;
+                throw $e;
+            }
         }
     }
 

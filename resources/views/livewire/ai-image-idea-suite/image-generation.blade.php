@@ -1,10 +1,13 @@
-<div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+<div class="grid grid-cols-1 gap-3 xl:grid-cols-2" x-data="{ generationMode: @entangle('generationMode') }">
     <div class="flex flex-col gap-6 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <div>
             <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{{ __('AI Image Generator') }}</h2>
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                {{ __('Generate images from text or edit existing photos with AI.') }}
+                {{ __('Generate images from text prompts using AI.') }}
             </p>
+            <div class="mt-2 rounded-md bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                <strong>{{ __('Note:') }}</strong> {{ __('Text + Image mode will use your prompt to generate a new image inspired by your description.') }}
+            </div>
         </div>
 
         @if (session()->has('error') || session()->has('message'))
@@ -17,7 +20,6 @@
             <div class="flex flex-wrap gap-2 rounded-xl border border-dashed border-zinc-200 p-2 dark:border-zinc-700">
                 @foreach([
                     'text-to-image' => __('Text → Image'),
-                    'image-only' => __('Image → Image'),
                     'text-image' => __('Text + Image'),
                 ] as $mode => $label)
                     <button
@@ -36,36 +38,69 @@
                 @endforeach
             </div>
 
-            <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="upload-image">
-                    {{ __('Upload Image (optional)') }}
-                </label>
-                <input
-                    type="file"
-                    id="upload-image"
-                    accept="image/png,image/jpeg,image/webp"
-                    wire:model.live="image"
-                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                >
-                @error('image')
-                    <p class="text-xs text-red-500">{{ $message }}</p>
-                @enderror
+            <div class="space-y-2" x-show="generationMode !== 'text-to-image'" x-transition>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="upload-image">
+                        {{ __('Upload Image') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="file"
+                        id="upload-image"
+                        accept="image/png,image/jpeg,image/webp"
+                        wire:model="image"
+                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        x-bind:required="generationMode !== 'text-to-image'"
+                    >
+                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {{ __('Maximum file size: 2MB. Supported formats: JPEG, PNG, WebP') }}
+                    </p>
+                    @error('image')
+                        <p class="text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                    @if($image)
+                        <div class="mt-3 space-y-2">
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Image uploaded successfully') }}</p>
+                            @php
+                                try {
+                                    $previewUrl = $image->temporaryUrl();
+                                } catch (\Exception $e) {
+                                    $previewUrl = null;
+                                }
+                            @endphp
+                            @if($previewUrl)
+                                <div class="relative h-32 w-32 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                                    <img src="{{ $previewUrl }}" alt="Preview" class="h-full w-full object-cover">
+                                </div>
+                            @endif
+                        </div>
+                    @endif
             </div>
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
-                    {{ __('Prompt') }}
+                    {{ __('Prompt') }} <span class="text-red-500">*</span>
                 </label>
-                <textarea id="prompt" wire:model.live="prompt" rows="4" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" placeholder="{{ __('Describe the image you want to generate...') }}"></textarea>
+                <textarea 
+                    id="prompt" 
+                    wire:model.live="prompt" 
+                    rows="4" 
+                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" 
+                    placeholder="{{ __('Describe the image you want to generate...') }}"
+                ></textarea>
                 @error('prompt')
                     <p class="text-xs text-red-500">{{ $message }}</p>
                 @enderror
             </div>
+            
             <div class="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-                <p class="font-medium">{{ __('Imagen Model') }}: <span class="font-semibold">{{ strtoupper($activeModel) }}</span></p>
+                <p class="font-medium">{{ __('Model') }}: <span class="font-semibold">{{ $activeModel }}</span></p>
                 <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    {{ __('This workspace always uses Imagen 4.0 for the best fidelity.') }}
+                    @if(str_starts_with($activeModel, 'gemini-'))
+                        {{ __('Using Gemini model - supports text and image input together.') }}
+                    @else
+                        {{ __('Using Imagen model - text-to-image generation only.') }}
+                    @endif
                 </p>
             </div>
+            
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2">
                     <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="image-count">
