@@ -269,22 +269,22 @@
                         <div class="group relative overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
                             <div class="aspect-square w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                                 @if($src)
-                                    <img 
-                                        src="{{ $src }}" 
-                                        alt="Generated image {{ $index + 1 }}" 
+                                    <img
+                                        src="{{ $src }}"
+                                        alt="Generated image {{ $index + 1 }}"
                                         class="h-full w-full object-cover transition-opacity group-hover:opacity-90"
                                         wire:click="selectImage({{ $index }})"
                                     >
                                 @endif
                             </div>
-                            
+
                             <div class="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
                                 <div class="flex w-full items-center justify-between p-3">
                                     <span class="text-sm font-medium text-white">#{{ $index + 1 }}</span>
-                                    
+
                                     <div class="flex items-center space-x-2">
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             class="inline-flex items-center justify-center rounded-md bg-white/10 p-1.5 text-white backdrop-blur-sm hover:bg-white/20"
                                             wire:click="saveImage({{ $index }})"
                                             wire:loading.attr="disabled"
@@ -296,9 +296,9 @@
                                             </svg>
                                             <span class="sr-only">{{ __('Save') }}</span>
                                         </button>
-                                        
-                                        <a 
-                                            href="#" 
+
+                                        <a
+                                            href="#"
                                             class="inline-flex items-center justify-center rounded-md bg-white/10 p-1.5 text-white backdrop-blur-sm hover:bg-white/20"
                                             wire:click.prevent="downloadImage({{ $index }})"
                                             wire:loading.attr="disabled"
