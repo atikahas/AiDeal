@@ -369,7 +369,7 @@
                             <img
                                 src="{{ $viewingSrc }}"
                                 alt="Generated image {{ $viewingImageIndex + 1 }}"
-                                class="mx-auto max-h-[80vh] w-auto object-contain"
+                                class="mx-auto max-h-[50vh] w-auto object-contain"
                             >
                         @endif
                     </div>

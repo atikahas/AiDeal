@@ -227,7 +227,7 @@
                         </button>
 
                         <!-- Image with checkerboard background -->
-                        <div class="flex max-h-[80vh] items-center justify-center overflow-auto bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0)] bg-[length:20px_20px] bg-[position:0_0,10px_10px] p-8 dark:bg-[linear-gradient(45deg,#404040_25%,transparent_25%,transparent_75%,#404040_75%,#404040),linear-gradient(45deg,#404040_25%,transparent_25%,transparent_75%,#404040_75%,#404040)]">
+                        <div class="flex max-h-[50vh] items-center justify-center overflow-auto bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0)] bg-[length:20px_20px] bg-[position:0_0,10px_10px] p-8 dark:bg-[linear-gradient(45deg,#404040_25%,transparent_25%,transparent_75%,#404040_75%,#404040),linear-gradient(45deg,#404040_25%,transparent_25%,transparent_75%,#404040_75%,#404040)]">
                             @php
                                 $modalSrc = $generatedImages[$viewingImageIndex]['url'] ?? null;
                                 if (! $modalSrc && isset($generatedImages[$viewingImageIndex]['data'])) {
