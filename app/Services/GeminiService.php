@@ -83,7 +83,7 @@ class GeminiService
                     'temperature' => $options['temperature'] ?? 0.7,
                     'topK' => $options['top_k'] ?? 40,
                     'topP' => $options['top_p'] ?? 0.95,
-                    'maxOutputTokens' => $options['max_tokens'] ?? 2048,
+                    'maxOutputTokens' => $options['max_tokens'] ?? 8192,
                 ],
             ];
             
@@ -121,11 +121,24 @@ class GeminiService
             if ($response->successful()) {
                 $result = $response->json();
                 $this->logDebug('Gemini API response', $result);
-                
+
+                // Check if we have text in the response
                 if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
                     return $result['candidates'][0]['content']['parts'][0]['text'];
                 }
-                
+
+                // Check for finish reason to provide better error messages
+                if (isset($result['candidates'][0]['finishReason'])) {
+                    $finishReason = $result['candidates'][0]['finishReason'];
+                    if ($finishReason === 'MAX_TOKENS') {
+                        $this->logError('Response truncated due to MAX_TOKENS', $result);
+                        throw new \Exception('Response was too long and got truncated. Please try with a shorter prompt or simpler request.');
+                    } elseif ($finishReason === 'SAFETY') {
+                        $this->logError('Response blocked by safety filters', $result);
+                        throw new \Exception('Response was blocked by safety filters. Please try rephrasing your request.');
+                    }
+                }
+
                 $this->logError('Unexpected response format from Gemini API', $result);
                 return null;
             }
