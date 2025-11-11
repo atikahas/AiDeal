@@ -13,7 +13,6 @@
                 'image-generation' => __('Image Generation'),
                 'product-photos' => __('Product Photos'),
                 'model-photos' => __('Model Photos'),
-                'image-enhancer' => __('Image Enhancer'),
                 'background-remover' => __('Background Remover'),
                 'saved-images' => __('Saved Images'),
             ] as $tabKey => $label)
