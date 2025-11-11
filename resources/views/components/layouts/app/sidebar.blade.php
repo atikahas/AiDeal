@@ -14,8 +14,9 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-                    <flux:navlist.item icon="pencil" :href="route('ai.content-idea-suite')" :current="request()->routeIs('ai.content-idea-suite')" wire:navigate>{{ __('AI Content Idea Suite') }}</flux:navlist.item> 
+                    <flux:navlist.item icon="pencil" :href="route('ai.content-idea-suite')" :current="request()->routeIs('ai.content-idea-suite')" wire:navigate>{{ __('AI Content Idea Suite') }}</flux:navlist.item>
                     <flux:navlist.item icon="photo" :href="route('ai.image-idea-suite')" :current="request()->routeIs('ai.image-idea-suite')" wire:navigate>{{ __('AI Image Suite') }}</flux:navlist.item>
+                    <flux:navlist.item icon="film" :href="route('ai.video-idea-suite')" :current="request()->routeIs('ai.video-idea-suite')" wire:navigate>{{ __('AI Video Suite') }}</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 

@@ -34,7 +34,10 @@ Route::middleware(['auth'])->group(function () {
 
     // AI Image Suite
     Route::get('ai-image-idea-suite', \App\Livewire\AiImageIdeaSuite\Index::class)->name('ai.image-idea-suite');
-    
+
+    // AI Video Suite
+    Route::get('ai-video-idea-suite', \App\Livewire\AiVideoIdeaSuite\Index::class)->name('ai.video-idea-suite');
+
     // AI Activity Logs
     Route::get('activity', \App\Livewire\UserActivity\Index::class)->name('activity.index');
 });
