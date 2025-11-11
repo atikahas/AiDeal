@@ -168,13 +168,13 @@
                             <img
                                 src="{{ Storage::disk('public')->url($selectedImage['image']['path']) }}"
                                 alt="Generated image"
-                                class="mx-auto max-h-[70vh] w-auto object-contain"
+                                class="mx-auto max-h-[50vh] w-auto object-contain"
                             >
                         @elseif(isset($selectedImage['image']['url']))
                             <img
                                 src="{{ $selectedImage['image']['url'] }}"
                                 alt="Generated image"
-                                class="mx-auto max-h-[70vh] w-auto object-contain"
+                                class="mx-auto max-h-[50vh] w-auto object-contain"
                             >
                         @endif
                     </div>
@@ -183,9 +183,9 @@
                     <div class="space-y-3 p-4 sm:p-6">
                         <!-- Prompt -->
                         @if(!empty($selectedImage['prompt']))
-                            <div>
+                            <div class="h-32 overflow-y-auto">
                                 <h4 class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{{ __('Prompt') }}</h4>
-                                <p class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">{{ $selectedImage['prompt'] }}</p>
+                                <p class="mt-1 text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap break-words">{{ $selectedImage['prompt'] }}</p>
                             </div>
                         @endif
 
