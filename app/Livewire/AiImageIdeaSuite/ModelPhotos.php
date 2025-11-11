@@ -35,6 +35,8 @@ class ModelPhotos extends Component
     public $activeModel;
     public $isProcessing = false;
     public $showAdvancedSettings = false;
+    public $showImageModal = false;
+    public $viewingImageIndex = null;
 
     // Options arrays
     public $ethnicities = [];
@@ -442,6 +444,18 @@ class ModelPhotos extends Component
     public function selectImage($index): void
     {
         $this->selectedImageIndex = (int)$index;
+    }
+
+    public function viewImage($index): void
+    {
+        $this->viewingImageIndex = (int)$index;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal(): void
+    {
+        $this->showImageModal = false;
+        $this->viewingImageIndex = null;
     }
 
     public function saveImage($index): void

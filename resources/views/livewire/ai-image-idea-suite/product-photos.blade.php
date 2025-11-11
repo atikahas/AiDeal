@@ -281,6 +281,19 @@
                                         <button
                                             type="button"
                                             class="inline-flex items-center justify-center rounded-md bg-white/10 p-1.5 text-white backdrop-blur-sm hover:bg-white/20"
+                                            wire:click="viewImage({{ $index }})"
+                                            title="View"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            <span class="sr-only">{{ __('View') }}</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center rounded-md bg-white/10 p-1.5 text-white backdrop-blur-sm hover:bg-white/20"
                                             wire:click="saveImage({{ $index }})"
                                             wire:loading.attr="disabled"
                                             wire:target="saveImage({{ $index }})"
@@ -314,4 +327,89 @@
             @endif
         </div>
     </div>
+
+    <!-- Image View Modal -->
+    @if($showImageModal && $viewingImageIndex !== null && isset($generatedImages[$viewingImageIndex]))
+        @php
+            $viewingImage = $generatedImages[$viewingImageIndex];
+            $viewingSrc = $viewingImage['url'] ?? null;
+            if (!$viewingSrc && isset($viewingImage['data'])) {
+                $mime = $viewingImage['mime'] ?? 'image/png';
+                $viewingSrc = 'data:' . $mime . ';base64,' . $viewingImage['data'];
+            } elseif (!$viewingSrc && is_string($viewingImage)) {
+                $viewingSrc = $viewingImage;
+            }
+        @endphp
+
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" wire:click.self="closeImageModal">
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" wire:click="closeImageModal"></div>
+
+            <!-- Modal Content -->
+            <div class="relative z-10 w-full max-w-6xl">
+                <!-- Close Button -->
+                <button
+                    wire:click="closeImageModal"
+                    class="absolute -right-2 -top-2 z-20 rounded-full bg-white p-2 text-zinc-700 shadow-lg transition hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 sm:-right-4 sm:-top-4"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <div class="overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-zinc-900">
+                    <!-- Image -->
+                    <div class="relative bg-zinc-100 dark:bg-zinc-800">
+                        @if($viewingSrc)
+                            <img
+                                src="{{ $viewingSrc }}"
+                                alt="Generated product photo {{ $viewingImageIndex + 1 }}"
+                                class="mx-auto max-h-[80vh] w-auto object-contain"
+                            >
+                        @endif
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center justify-between gap-2 p-4 sm:p-6">
+                        <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            {{ __('Image') }} #{{ $viewingImageIndex + 1 }}
+                        </span>
+
+                        <div class="flex gap-2">
+                            <button
+                                wire:click="saveImage({{ $viewingImageIndex }})"
+                                wire:loading.attr="disabled"
+                                wire:target="saveImage({{ $viewingImageIndex }})"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                </svg>
+                                {{ __('Save') }}
+                            </button>
+
+                            <button
+                                wire:click="downloadImage({{ $viewingImageIndex }})"
+                                wire:loading.attr="disabled"
+                                wire:target="downloadImage({{ $viewingImageIndex }})"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                {{ __('Download') }}
+                            </button>
+
+                            <button
+                                wire:click="closeImageModal"
+                                class="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            >
+                                {{ __('Close') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

@@ -40,6 +40,8 @@ class ProductPhotos extends Component
     public $currentImageJobId = null;
     public $activeModel;
     public $isProcessing = false;
+    public $showImageModal = false;
+    public $viewingImageIndex = null;
 
     public function mount()
     {
@@ -393,6 +395,18 @@ class ProductPhotos extends Component
     public function selectImage($index): void
     {
         $this->selectedImageIndex = (int)$index;
+    }
+
+    public function viewImage($index): void
+    {
+        $this->viewingImageIndex = (int)$index;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal(): void
+    {
+        $this->showImageModal = false;
+        $this->viewingImageIndex = null;
     }
 
     public function saveImage($index): void

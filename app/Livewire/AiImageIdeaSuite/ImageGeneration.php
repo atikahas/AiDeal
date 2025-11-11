@@ -41,6 +41,8 @@ class ImageGeneration extends Component
     public $generationMode = 'text-to-image';
     public $imagePreviewUrl;
     public $currentImageJobId = null;
+    public $showImageModal = false;
+    public $viewingImageIndex = null;
 
     public function mount()
     {
@@ -267,6 +269,18 @@ class ImageGeneration extends Component
     public function selectImage($index): void
     {
         $this->selectedImageIndex = (int)$index;
+    }
+
+    public function viewImage($index): void
+    {
+        $this->viewingImageIndex = (int)$index;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal(): void
+    {
+        $this->showImageModal = false;
+        $this->viewingImageIndex = null;
     }
 
     public function saveImage($index): void
