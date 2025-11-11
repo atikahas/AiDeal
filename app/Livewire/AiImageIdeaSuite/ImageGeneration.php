@@ -71,7 +71,6 @@ class ImageGeneration extends Component
             'prompt' => 'required|string|max:1000',
             'negativePrompt' => 'nullable|string|max:1000',
             'imageCount' => 'required|integer|min:1|max:5',
-            'aspectRatio' => 'required|in:1:1,4:3,16:9,9:16,3:2',
             'style' => 'nullable|string|max:255',
             'composition' => 'nullable|string|max:255',
             'lighting' => 'nullable|string|max:255',
@@ -156,7 +155,6 @@ class ImageGeneration extends Component
                 meta: [
                     'generation_mode' => $this->generationMode,
                     'image_count' => count($images),
-                    'aspect_ratio' => $this->aspectRatio,
                     'style' => $this->style,
                     'image_job_id' => $imageJob->id,
                 ]
@@ -180,7 +178,6 @@ class ImageGeneration extends Component
                 latencyMs: $latencyMs,
                 meta: [
                     'generation_mode' => $this->generationMode,
-                    'aspect_ratio' => $this->aspectRatio,
                     'style' => $this->style,
                 ]
             );
@@ -217,7 +214,6 @@ class ImageGeneration extends Component
             'prompt',
             'negativePrompt',
             'imageCount',
-            'aspectRatio',
             'style',
             'composition',
             'lighting',
@@ -231,7 +227,6 @@ class ImageGeneration extends Component
         ]);
 
         $this->imageCount = 1;
-        $this->aspectRatio = '1:1';
         $this->style = 'photographic';
         $this->generationMode = 'text-to-image';
     }
@@ -254,7 +249,6 @@ class ImageGeneration extends Component
             'prompt' => $this->prompt,
             'negative_prompt' => $this->negativePrompt,
             'image_count' => $this->imageCount,
-            'aspect_ratio' => $this->aspectRatio,
             'style' => $this->style,
             'composition' => $this->composition,
             'lighting' => $this->lighting,

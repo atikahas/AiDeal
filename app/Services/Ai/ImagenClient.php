@@ -108,7 +108,13 @@ class ImagenClient
 
     protected function composePrompt(array $options): string
     {
-        $segments = [trim((string) ($options['prompt'] ?? ''))];
+        $segments = [];
+
+        // Add main prompt
+        $mainPrompt = trim((string) ($options['prompt'] ?? ''));
+        if (!empty($mainPrompt)) {
+            $segments[] = $mainPrompt;
+        }
 
         $details = array_filter([
             $options['style'] ?? null ? 'Style: ' . $options['style'] : null,
@@ -123,8 +129,22 @@ class ImagenClient
             $segments[] = implode(', ', $details);
         }
 
+        // Add aspect ratio instruction with strong emphasis
         if (!empty($options['aspect_ratio'])) {
-            $segments[] = 'Aspect Ratio: ' . $options['aspect_ratio'];
+            $aspectRatio = $options['aspect_ratio'];
+
+            // Convert aspect ratio to dimensions description for better understanding
+            $dimensionMap = [
+                '1:1' => 'square format (1:1)',
+                '4:3' => 'horizontal 4:3 aspect ratio',
+                '16:9' => 'widescreen 16:9 aspect ratio',
+                '9:16' => 'vertical portrait 9:16 aspect ratio',
+                '3:2' => 'classic 3:2 aspect ratio',
+                '3:4' => 'vertical portrait 3:4 aspect ratio',
+            ];
+
+            $description = $dimensionMap[$aspectRatio] ?? "aspect ratio {$aspectRatio}";
+            $segments[] = "IMPORTANT: The output image MUST be in {$description}";
         }
 
         return trim(implode('. ', array_filter($segments)));
@@ -159,7 +179,7 @@ class ImagenClient
                 'text' => $this->composePrompt($options)
             ]
         ];
-        
+
         // Add image if provided
         if ($image) {
             $parts[] = [
@@ -169,10 +189,22 @@ class ImagenClient
                 ]
             ];
         }
-        
+
         $imageCount = (int) ($options['image_count'] ?? 1);
         $images = [];
-        
+
+        // Build generation config
+        // Note: Gemini models don't support aspectRatio in generationConfig
+        // Aspect ratio must be specified in the prompt instead
+        // Note: responseMimeType only supports text formats (text/plain, application/json, etc.)
+        $generationConfig = [
+            'temperature' => 0.8,
+            'topK' => 40,
+            'topP' => 0.95,
+            'candidateCount' => 1, // Always use 1 for compatibility
+            'maxOutputTokens' => 8192,
+        ];
+
         // Most Gemini models don't support multiple candidates for image generation
         // So we need to make multiple requests
         for ($i = 0; $i < $imageCount; $i++) {
@@ -182,13 +214,7 @@ class ImagenClient
                         'parts' => $parts
                     ]
                 ],
-                'generationConfig' => [
-                    'temperature' => 0.8,
-                    'topK' => 40,
-                    'topP' => 0.95,
-                    'candidateCount' => 1, // Always use 1 for compatibility
-                    'maxOutputTokens' => 8192,
-                ]
+                'generationConfig' => $generationConfig
             ];
             
             try {

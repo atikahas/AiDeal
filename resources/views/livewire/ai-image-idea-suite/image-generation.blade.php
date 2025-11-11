@@ -87,29 +87,15 @@
                 @enderror
             </div>
             
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="image-count">
-                        {{ __('Number of Images') }}
-                    </label>
-                    <select id="image-count" wire:model.live="imageCount" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                        @for($i = 1; $i <= 4; $i++)
-                            <option value="{{ $i }}">{{ $i }} {{ $i === 1 ? 'Image' : 'Images' }}</option>
-                        @endfor
-                    </select>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="aspect-ratio">
-                        {{ __('Aspect Ratio') }}
-                    </label>
-                    <select id="aspect-ratio" wire:model.live="aspectRatio" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                        <option value="1:1" selected>1:1 Square</option>
-                        <option value="4:3">4:3 Standard</option>
-                        <option value="16:9">16:9 Widescreen</option>
-                        <option value="9:16">9:16 Portrait</option>
-                        <option value="3:2">3:2 Classic 35mm</option>
-                    </select>
-                </div>
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="image-count">
+                    {{ __('Number of Images') }}
+                </label>
+                <select id="image-count" wire:model.live="imageCount" class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+                    @for($i = 1; $i <= 4; $i++)
+                        <option value="{{ $i }}">{{ $i }} {{ $i === 1 ? 'Image' : 'Images' }}</option>
+                    @endfor
+                </select>
             </div>
             <div class="space-y-2">
                 <button type="button" wire:click="$toggle('showAdvancedSettings')" class="inline-flex items-center text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
