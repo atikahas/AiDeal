@@ -91,16 +91,38 @@
             </div>
 
             <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
-                    {{ __('Video Prompt') }} <span class="text-red-500">*</span>
-                </label>
+                <div class="flex items-center justify-between">
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
+                        {{ __('Video Prompt') }} <span class="text-red-500">*</span>
+                    </label>
+                    <button
+                        type="button"
+                        wire:click="generateMagicPrompt"
+                        wire:loading.attr="disabled"
+                        wire:target="generateMagicPrompt"
+                        class="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    >
+                        <svg wire:loading.remove wire:target="generateMagicPrompt" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        <span wire:loading.remove wire:target="generateMagicPrompt">{{ __('Magic Prompt') }}</span>
+                        <span wire:loading wire:target="generateMagicPrompt">{{ __('Enhancing') }}</span>
+                        <svg wire:loading wire:target="generateMagicPrompt" class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"></path>
+                        </svg>
+                    </button>
+                </div>
                 <textarea
                     id="prompt"
                     wire:model.defer="prompt"
                     rows="4"
                     class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                    placeholder="{{ __('Describe the video you want to generate...') }}"
+                    placeholder="{{ __('e.g., Premium smartphone with sleek design') }}"
                 ></textarea>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    💡 {{ __('Tip: Enter a simple product description, then click Magic Prompt to enhance it automatically.') }}
+                </p>
                 @error('prompt')
                     <p class="text-xs text-red-500">{{ $message }}</p>
                 @enderror

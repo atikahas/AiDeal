@@ -25,6 +25,7 @@ class VideoGeneration extends Component
     public $referenceImage;
     public $generatedVideos = [];
     public $isProcessing = false;
+    public $isMagicPromptProcessing = false;
     public $selectedVideoIndex = null;
     public $currentVideoJobId = null;
 
@@ -35,10 +36,12 @@ class VideoGeneration extends Component
     public array $voiceoverMoods = ['Normal', 'Happy', 'Sad', 'Excited', 'Calm', 'Serious', 'Friendly', 'Professional', 'Energetic', 'Warm'];
 
     protected VeoClient $veoClient;
+    protected \App\Services\GeminiService $geminiService;
 
-    public function boot(VeoClient $veoClient)
+    public function boot(VeoClient $veoClient, \App\Services\GeminiService $geminiService)
     {
         $this->veoClient = $veoClient;
+        $this->geminiService = $geminiService;
     }
 
     protected function rules(): array
@@ -54,6 +57,50 @@ class VideoGeneration extends Component
             'voiceoverMood' => 'nullable|string|in:Normal,Happy,Sad,Excited,Calm,Serious,Friendly,Professional,Energetic,Warm',
             'referenceImage' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:2048',
         ];
+    }
+
+    public function generateMagicPrompt()
+    {
+        if (empty($this->prompt)) {
+            session()->flash('error', __('Please enter a product name or description first.'));
+            return;
+        }
+
+        $this->isMagicPromptProcessing = true;
+
+        try {
+            $enhancementPrompt = "Create an 8-second TikTok/Reels video concept for: {$this->prompt}\n\n";
+            $enhancementPrompt .= "Format:\n";
+            $enhancementPrompt .= "1. Scene: [Setting + lighting + action]\n";
+            $enhancementPrompt .= "2. Shots: [Key shot types]\n";
+            $enhancementPrompt .= "3. Style: [Aesthetic + colors]\n";
+            $enhancementPrompt .= "4. Text: [Key text/graphics]\n\n";
+            $enhancementPrompt .= "Example:\n";
+            $enhancementPrompt .= "\"8s video showing [product] in use. Close-ups of [key feature] with [style]. Text: [main benefit].\"\n\n";
+            $enhancementPrompt .= "💬 [Natural 1-2 line script]";
+
+            $enhancedPrompt = $this->geminiService->generateContent($enhancementPrompt, [
+                'temperature' => 0.7,
+            ]);
+
+            if ($enhancedPrompt) {
+                $this->prompt = trim($enhancedPrompt);
+                session()->flash('message', __('Magic prompt generated successfully!'));
+            } else {
+                throw new \Exception('No enhanced prompt was generated');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Magic prompt generation failed', [
+                'error' => $e->getMessage(),
+                'original_prompt' => $this->prompt,
+            ]);
+
+            session()->flash('error', __('Failed to generate magic prompt: :message', [
+                'message' => $e->getMessage(),
+            ]));
+        }
+
+        $this->isMagicPromptProcessing = false;
     }
 
     public function generateVideo()
