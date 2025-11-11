@@ -42,21 +42,25 @@ class ImagenClient
         );
     }
 
-    public function editImage(array $options, UploadedFile $image): array
+    public function editImage(array $options, UploadedFile $image, ?UploadedFile $additionalImage = null): array
     {
-        // Try using the generateContent endpoint with image
+        // Try using the generateContent endpoint with image(s)
         try {
-            return $this->generateWithImage($options, $image);
+            $images = [$image];
+            if ($additionalImage) {
+                $images[] = $additionalImage;
+            }
+            return $this->generateWithImages($options, $images);
         } catch (\Exception $e) {
             // Fallback to text-only generation
             Log::warning('Image-based generation failed, falling back to text-only', [
                 'error' => $e->getMessage()
             ]);
-            
+
             if (!empty($options['prompt'])) {
                 $options['prompt'] = 'Create an image: ' . $options['prompt'];
             }
-            
+
             return $this->textToImage($options);
         }
     }
@@ -172,7 +176,7 @@ class ImagenClient
         return str_starts_with($model, 'gemini-');
     }
     
-    protected function generateContentWithGemini(array $options, ?UploadedFile $image = null): array
+    protected function generateContentWithGemini(array $options, array $inputImages = []): array
     {
         $parts = [
             [
@@ -180,14 +184,16 @@ class ImagenClient
             ]
         ];
 
-        // Add image if provided
-        if ($image) {
-            $parts[] = [
-                'inline_data' => [
-                    'mime_type' => $image->getMimeType() ?: 'image/jpeg',
-                    'data' => base64_encode(file_get_contents($image->getRealPath()))
-                ]
-            ];
+        // Add images if provided
+        foreach ($inputImages as $image) {
+            if ($image instanceof UploadedFile) {
+                $parts[] = [
+                    'inline_data' => [
+                        'mime_type' => $image->getMimeType() ?: 'image/jpeg',
+                        'data' => base64_encode(file_get_contents($image->getRealPath()))
+                    ]
+                ];
+            }
         }
 
         $imageCount = (int) ($options['image_count'] ?? 1);
@@ -244,18 +250,23 @@ class ImagenClient
         return $images;
     }
     
-    protected function generateWithImage(array $options, UploadedFile $image): array
+    protected function generateWithImages(array $options, array $images): array
     {
         $model = $this->resolveModel($options);
-        
+
         // Gemini models support multimodal input
         if ($this->isGeminiModel($model)) {
-            return $this->generateContentWithGemini($options, $image);
+            return $this->generateContentWithGemini($options, $images);
         }
-        
+
         // Imagen models don't support image input, fallback to text-only
         Log::info('Model does not support image input, using text-only generation');
         return $this->textToImage($options);
+    }
+
+    protected function generateWithImage(array $options, UploadedFile $image): array
+    {
+        return $this->generateWithImages($options, [$image]);
     }
 
 
