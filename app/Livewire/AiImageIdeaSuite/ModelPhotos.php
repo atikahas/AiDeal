@@ -305,17 +305,31 @@ class ModelPhotos extends Component
 
     protected function getModelPhotoPrompt(): string
     {
-        // If user provided a custom prompt, use it directly
+        $promptParts = [];
+
+        // Always add context about images when model face is uploaded
+        if ($this->modelFaceImage) {
+            $promptParts[] = 'IMPORTANT: You are given two images:';
+            $promptParts[] = '1. The FIRST image is the PRODUCT (item/clothing/accessory/makeup) that the model should wear or showcase.';
+            $promptParts[] = '2. The SECOND image shows the MODEL\'S FACE that MUST be used in the generated photo.';
+            $promptParts[] = '';
+        }
+
+        // If user provided a custom prompt, add it after the image context
         if (!empty(trim($this->prompt))) {
-            return trim($this->prompt);
+            if ($this->modelFaceImage) {
+                $promptParts[] = 'TASK: ' . trim($this->prompt);
+                $promptParts[] = '';
+                $promptParts[] = 'CRITICAL: Use the face from the second image and make the model wear/showcase the product from the first image.';
+            } else {
+                $promptParts[] = trim($this->prompt);
+            }
+            return implode("\n", $promptParts);
         }
 
         // Build detailed structured prompt
-        $promptParts = [];
-
         if ($this->modelFaceImage) {
-            $promptParts[] = 'IMPORTANT: The first uploaded image is the PRODUCT to be worn/showcased. The second uploaded image shows the MODEL\'S FACE that must be used.';
-            $promptParts[] = 'Create a professional, photorealistic photo of a model with the face from the second image, wearing or showcasing the product from the first image.';
+            $promptParts[] = 'TASK: Create a professional, photorealistic photo of a model with the face from the second image, wearing or showcasing the product from the first image.';
             $promptParts[] = 'The model should naturally display the product in a lifestyle or fashion context.';
         } else {
             $promptParts[] = 'Create a professional, photorealistic model photo wearing or showcasing the uploaded product.';
