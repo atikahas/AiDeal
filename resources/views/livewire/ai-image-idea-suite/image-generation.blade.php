@@ -35,41 +35,93 @@
                 @endforeach
             </div>
 
-            <div class="space-y-2" x-show="generationMode !== 'text-to-image'" x-transition>
-                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="upload-image">
-                        {{ __('Upload Image') }} <span class="text-red-500">*</span>
+            <div class="space-y-2" x-show="generationMode !== 'text-to-image'" x-transition x-data="{ isDragging: false }">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                    {{ __('Upload Image') }} <span class="text-red-500">*</span>
+                </label>
+
+                @if($image)
+                    @php
+                        try {
+                            $previewUrl = $image->temporaryUrl();
+                        } catch (\Exception $e) {
+                            $previewUrl = null;
+                        }
+                    @endphp
+
+                    <div class="relative overflow-hidden rounded-xl border-2 border-zinc-200 bg-gradient-to-br from-zinc-50 to-white dark:border-zinc-700 dark:from-zinc-900 dark:to-zinc-950">
+                        @if($previewUrl)
+                            <div class="aspect-video w-full overflow-hidden">
+                                <img src="{{ $previewUrl }}" alt="Preview" class="h-full w-full object-contain">
+                            </div>
+                        @endif
+
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
+                            <button
+                                type="button"
+                                wire:click="$set('image', null)"
+                                class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-lg transition hover:bg-zinc-100"
+                            >
+                                {{ __('Change Image') }}
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <label
+                        for="upload-image-gen"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="isDragging = false"
+                        :class="isDragging ? 'border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800' : 'border-zinc-300 dark:border-zinc-600'"
+                        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-white px-6 py-10 transition-all hover:border-zinc-400 hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:bg-zinc-900"
+                        wire:loading.class="pointer-events-none opacity-50"
+                        wire:target="image"
+                    >
+                        <div class="mb-3 rounded-full bg-zinc-100 p-3 dark:bg-zinc-800">
+                            <svg class="h-8 w-8 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+
+                        <div class="text-center">
+                            <p class="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                                <span class="text-zinc-900 underline dark:text-zinc-100">{{ __('Click to upload') }}</span>
+                                {{ __('or drag and drop') }}
+                            </p>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                {{ __('PNG, JPG or WebP (max. 2MB)') }}
+                            </p>
+                        </div>
+
+                        <div wire:loading wire:target="image" class="mt-3">
+                            <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>{{ __('Uploading...') }}</span>
+                            </div>
+                        </div>
                     </label>
+
                     <input
                         type="file"
-                        id="upload-image"
+                        id="upload-image-gen"
                         accept="image/png,image/jpeg,image/webp"
                         wire:model="image"
-                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        class="sr-only"
                         x-bind:required="generationMode !== 'text-to-image'"
                     >
-                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                        {{ __('Maximum file size: 2MB. Supported formats: JPEG, PNG, WebP') }}
+                @endif
+
+                @error('image')
+                    <p class="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ $message }}
                     </p>
-                    @error('image')
-                        <p class="text-xs text-red-500">{{ $message }}</p>
-                    @enderror
-                    @if($image)
-                        <div class="mt-3 space-y-2">
-                            <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Image uploaded successfully') }}</p>
-                            @php
-                                try {
-                                    $previewUrl = $image->temporaryUrl();
-                                } catch (\Exception $e) {
-                                    $previewUrl = null;
-                                }
-                            @endphp
-                            @if($previewUrl)
-                                <div class="relative h-32 w-32 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
-                                    <img src="{{ $previewUrl }}" alt="Preview" class="h-full w-full object-cover">
-                                </div>
-                            @endif
-                        </div>
-                    @endif
+                @enderror
             </div>
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
