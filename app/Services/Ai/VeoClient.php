@@ -160,10 +160,17 @@ class VeoClient
     {
         $videos = [];
 
+        Log::info('Extracting videos from result', [
+            'has_response' => isset($result['response']),
+            'response_keys' => isset($result['response']) ? array_keys($result['response']) : [],
+        ]);
+
         // Navigate through the response structure
         $samples = $result['response']['generateVideoResponse']['generatedSamples'] ?? [];
 
-        foreach ($samples as $sample) {
+        Log::info('Found samples', ['count' => count($samples)]);
+
+        foreach ($samples as $index => $sample) {
             $videoUri = $sample['video']['uri'] ?? null;
 
             if ($videoUri) {
@@ -175,6 +182,12 @@ class VeoClient
                     'uri' => $videoUri,
                     'mime' => 'video/mp4',
                 ];
+
+                Log::info('Video added to array', [
+                    'index' => $index,
+                    'data_length' => strlen($videoData),
+                    'has_data' => !empty($videoData),
+                ]);
             }
         }
 
@@ -182,6 +195,8 @@ class VeoClient
             Log::warning('No videos found in Veo response', ['response' => $result]);
             throw new \RuntimeException('No videos were generated');
         }
+
+        Log::info('Total videos extracted', ['count' => count($videos)]);
 
         return $videos;
     }

@@ -18,6 +18,10 @@ class VideoGeneration extends Component
     public $duration = '8';
     public $aspectRatio = '16:9';
     public $style = 'cinematic';
+    public $onScreenText = '';
+    public $spokenDialogue = '';
+    public $voiceoverLanguage = 'English';
+    public $voiceoverMood = 'Normal';
     public $referenceImage;
     public $generatedVideos = [];
     public $isProcessing = false;
@@ -27,6 +31,8 @@ class VideoGeneration extends Component
     public array $durations = ['4', '6', '8'];
     public array $aspectRatios = ['16:9', '9:16'];
     public array $styles = ['Cinematic', 'Realistic', 'Animated', 'Artistic', 'Documentary'];
+    public array $voiceoverLanguages = ['English', 'Malay', 'Chinese', 'Tamil'];
+    public array $voiceoverMoods = ['Normal', 'Happy', 'Sad', 'Excited', 'Calm', 'Serious', 'Friendly', 'Professional', 'Energetic', 'Warm'];
 
     protected VeoClient $veoClient;
 
@@ -42,6 +48,10 @@ class VideoGeneration extends Component
             'duration' => 'required|in:4,6,8',
             'aspectRatio' => 'required|string|in:16:9,9:16',
             'style' => 'required|string',
+            'onScreenText' => 'nullable|string|max:500',
+            'spokenDialogue' => 'nullable|string|max:1000',
+            'voiceoverLanguage' => 'nullable|string|in:English,Malay,Chinese,Tamil',
+            'voiceoverMood' => 'nullable|string|in:Normal,Happy,Sad,Excited,Calm,Serious,Friendly,Professional,Energetic,Warm',
             'referenceImage' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
@@ -62,8 +72,40 @@ class VideoGeneration extends Component
                 ? $this->veoClient->imageToVideo($payload, $this->referenceImage)
                 : $this->veoClient->textToVideo($payload);
 
-            $this->generatedVideos = $videos;
-            $this->selectedVideoIndex = empty($videos) ? null : 0;
+            \Log::info('Videos received from VeoClient', [
+                'count' => count($videos),
+                'keys' => !empty($videos) ? array_keys($videos[0] ?? []) : [],
+                'has_data' => !empty($videos) && !empty($videos[0]['data'] ?? null),
+            ]);
+
+            // Store videos to temporary files immediately to avoid Livewire size limits
+            $processedVideos = [];
+            foreach ($videos as $index => $video) {
+                if (!empty($video['data'])) {
+                    $userId = auth()->id();
+                    $timestamp = now()->format('Y-m-d_H-i-s');
+                    $filename = sprintf('ai-videos/%s/temp_veo_%s_%d.mp4', $userId, $timestamp, $index + 1);
+
+                    // Decode and save to storage
+                    $videoData = base64_decode($video['data']);
+                    Storage::disk('public')->put($filename, $videoData);
+
+                    $processedVideos[] = [
+                        'url' => Storage::disk('public')->url($filename),
+                        'path' => $filename,
+                        'mime' => $video['mime'] ?? 'video/mp4',
+                        'size' => strlen($videoData),
+                    ];
+                }
+            }
+
+            $this->generatedVideos = $processedVideos;
+            $this->selectedVideoIndex = empty($processedVideos) ? null : 0;
+
+            \Log::info('Videos processed and stored', [
+                'generatedVideos_count' => count($this->generatedVideos),
+                'selectedVideoIndex' => $this->selectedVideoIndex,
+            ]);
 
             // Create VideoJob record
             $videoJob = VideoJob::create([
@@ -138,6 +180,25 @@ class VideoGeneration extends Component
             $promptText = "{$this->style} style: {$promptText}";
         }
 
+        // Add on-screen text
+        if (!empty($this->onScreenText)) {
+            $promptText .= "\n\nOn-screen text to display: \"{$this->onScreenText}\"";
+        }
+
+        // Add spoken dialogue with voiceover details
+        if (!empty($this->spokenDialogue)) {
+            $voiceDetails = [];
+            if (!empty($this->voiceoverLanguage)) {
+                $voiceDetails[] = "language: {$this->voiceoverLanguage}";
+            }
+            if (!empty($this->voiceoverMood)) {
+                $voiceDetails[] = "mood: {$this->voiceoverMood}";
+            }
+
+            $voiceContext = !empty($voiceDetails) ? ' (' . implode(', ', $voiceDetails) . ')' : '';
+            $promptText .= "\n\nVoiceover{$voiceContext}: \"{$this->spokenDialogue}\"";
+        }
+
         return [
             'prompt' => $promptText,
             'duration' => (int) $this->duration,
@@ -156,7 +217,7 @@ class VideoGeneration extends Component
         $this->selectedVideoIndex = (int)$index;
         $video = $this->generatedVideos[$this->selectedVideoIndex] ?? null;
 
-        if (!$video || empty($video['data'])) {
+        if (!$video || empty($video['path'])) {
             session()->flash('error', __('Unable to save the selected video.'));
             return;
         }
@@ -167,28 +228,11 @@ class VideoGeneration extends Component
         }
 
         try {
-            $userId = auth()->id();
-            $timestamp = now()->format('Y-m-d_H-i-s');
-
-            // Generate unique filename
-            $filename = sprintf(
-                'ai-videos/%s/veo_%s_%d.mp4',
-                $userId,
-                $timestamp,
-                $this->selectedVideoIndex + 1
-            );
-
-            // Decode base64 video data
-            $videoData = base64_decode($video['data']);
-
-            // Save to storage
-            Storage::disk('public')->put($filename, $videoData);
-
             $savedVideoData = [
-                'path' => $filename,
+                'path' => $video['path'],
                 'mime' => $video['mime'] ?? 'video/mp4',
-                'url' => Storage::disk('public')->url($filename),
-                'size' => strlen($videoData),
+                'url' => $video['url'],
+                'size' => $video['size'],
             ];
 
             // Update the VideoJob record
@@ -222,7 +266,7 @@ class VideoGeneration extends Component
 
         $video = $this->generatedVideos[$index] ?? null;
 
-        if (!$video || empty($video['data'])) {
+        if (!$video || empty($video['path'])) {
             session()->flash('error', __('Unable to download the selected video.'));
             return null;
         }
@@ -233,9 +277,15 @@ class VideoGeneration extends Component
             $index + 1
         );
 
-        return response()->streamDownload(function () use ($video) {
-            echo base64_decode($video['data']);
-        }, $filename, [
+        // Get the file from storage
+        $filePath = Storage::disk('public')->path($video['path']);
+
+        if (!file_exists($filePath)) {
+            session()->flash('error', __('Video file not found.'));
+            return null;
+        }
+
+        return response()->download($filePath, $filename, [
             'Content-Type' => $video['mime'] ?? 'video/mp4',
         ]);
     }
@@ -247,6 +297,10 @@ class VideoGeneration extends Component
             'duration',
             'aspectRatio',
             'style',
+            'onScreenText',
+            'spokenDialogue',
+            'voiceoverLanguage',
+            'voiceoverMood',
             'referenceImage',
             'generatedVideos',
             'selectedVideoIndex',
@@ -256,6 +310,8 @@ class VideoGeneration extends Component
         $this->duration = '8';
         $this->aspectRatio = '16:9';
         $this->style = 'cinematic';
+        $this->voiceoverLanguage = 'English';
+        $this->voiceoverMood = 'Normal';
     }
 
     public function render()

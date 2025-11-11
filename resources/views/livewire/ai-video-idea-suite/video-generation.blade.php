@@ -14,69 +14,6 @@
         @endif
 
         <form wire:submit.prevent="generateVideo" class="space-y-4">
-            <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
-                    {{ __('Video Prompt') }} <span class="text-red-500">*</span>
-                </label>
-                <textarea
-                    id="prompt"
-                    wire:model.defer="prompt"
-                    rows="4"
-                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                    placeholder="{{ __('Describe the video you want to generate...') }}"
-                ></textarea>
-                @error('prompt')
-                    <p class="text-xs text-red-500">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="duration">
-                        {{ __('Duration (seconds)') }}
-                    </label>
-                    <select
-                        id="duration"
-                        wire:model="duration"
-                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                    >
-                        @foreach($durations as $dur)
-                            <option value="{{ $dur }}">{{ $dur }} {{ __('seconds') }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="aspect-ratio">
-                        {{ __('Aspect Ratio') }}
-                    </label>
-                    <select
-                        id="aspect-ratio"
-                        wire:model="aspectRatio"
-                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                    >
-                        @foreach($aspectRatios as $ratio)
-                            <option value="{{ $ratio }}">{{ $ratio }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="style">
-                    {{ __('Video Style') }}
-                </label>
-                <select
-                    id="style"
-                    wire:model="style"
-                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                >
-                    @foreach($styles as $styleOption)
-                        <option value="{{ strtolower($styleOption) }}">{{ $styleOption }}</option>
-                    @endforeach
-                </select>
-            </div>
-
             <div class="space-y-2" x-data="{ isDragging: false }">
                 <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200">
                     {{ __('Reference Image (Optional)') }}
@@ -153,6 +90,135 @@
                 @enderror
             </div>
 
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="prompt">
+                    {{ __('Video Prompt') }} <span class="text-red-500">*</span>
+                </label>
+                <textarea
+                    id="prompt"
+                    wire:model.defer="prompt"
+                    rows="4"
+                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    placeholder="{{ __('Describe the video you want to generate...') }}"
+                ></textarea>
+                @error('prompt')
+                    <p class="text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="duration">
+                        {{ __('Duration (seconds)') }}
+                    </label>
+                    <select
+                        id="duration"
+                        wire:model="duration"
+                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                        @foreach($durations as $dur)
+                            <option value="{{ $dur }}">{{ $dur }} {{ __('seconds') }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="aspect-ratio">
+                        {{ __('Aspect Ratio') }}
+                    </label>
+                    <select
+                        id="aspect-ratio"
+                        wire:model="aspectRatio"
+                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                        @foreach($aspectRatios as $ratio)
+                            <option value="{{ $ratio }}">{{ $ratio }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="style">
+                    {{ __('Video Style') }}
+                </label>
+                <select
+                    id="style"
+                    wire:model="style"
+                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                >
+                    @foreach($styles as $styleOption)
+                        <option value="{{ strtolower($styleOption) }}">{{ $styleOption }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <flux:separator text="{{ __('Dialogue & Text (Optional)') }}" />
+
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="on-screen-text">
+                    {{ __('On-Screen Text (Captions)') }}
+                </label>
+                <textarea
+                    id="on-screen-text"
+                    wire:model.defer="onScreenText"
+                    rows="2"
+                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    placeholder="{{ __('Enter any text you want to appear on the video.') }}"
+                ></textarea>
+                @error('onScreenText')
+                    <p class="text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="spoken-dialogue">
+                    {{ __('Spoken Dialogue (Voiceover)') }}
+                </label>
+                <textarea
+                    id="spoken-dialogue"
+                    wire:model.defer="spokenDialogue"
+                    rows="3"
+                    class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    placeholder="{{ __('Enter the exact dialogue for the AI to speak.') }}"
+                ></textarea>
+                @error('spokenDialogue')
+                    <p class="text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="voiceover-language">
+                        {{ __('Voiceover Language') }}
+                    </label>
+                    <select
+                        id="voiceover-language"
+                        wire:model="voiceoverLanguage"
+                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                        @foreach($voiceoverLanguages as $lang)
+                            <option value="{{ $lang }}">{{ $lang }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-200" for="voiceover-mood">
+                        {{ __('Voiceover Mood') }}
+                    </label>
+                    <select
+                        id="voiceover-mood"
+                        wire:model="voiceoverMood"
+                        class="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                        @foreach($voiceoverMoods as $mood)
+                            <option value="{{ $mood }}">{{ $mood }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
             <flux:separator />
 
             <div class="flex flex-wrap items-center gap-3">
@@ -188,18 +254,11 @@
             @if(!empty($generatedVideos))
                 <div class="space-y-4">
                     @foreach($generatedVideos as $index => $video)
-                        @php
-                            $src = $video['uri'] ?? null;
-                            if (!$src && isset($video['data'])) {
-                                $mime = $video['mime'] ?? 'video/mp4';
-                                $src = 'data:' . $mime . ';base64,' . $video['data'];
-                            }
-                        @endphp
                         <div class="group relative overflow-hidden rounded-lg border border-zinc-200 bg-zinc-900 dark:border-zinc-700">
                             <div class="aspect-video w-full">
-                                @if($src)
+                                @if(!empty($video['url']))
                                     <video
-                                        src="{{ $src }}"
+                                        src="{{ $video['url'] }}"
                                         class="h-full w-full object-contain"
                                         controls
                                         preload="metadata"
