@@ -13,6 +13,7 @@ class VideoJob extends Model
         'input_json',
         'reference_image_path',
         'generated_videos',
+        'generated_images',
         'status',
         'is_saved',
         'error_message',
@@ -24,6 +25,7 @@ class VideoJob extends Model
     protected $casts = [
         'input_json' => 'array',
         'generated_videos' => 'array',
+        'generated_images' => 'array',
         'is_saved' => 'boolean',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
